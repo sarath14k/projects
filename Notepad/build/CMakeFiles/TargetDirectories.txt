@@ -1,9 +1,0 @@
-/home/sarath/projects/cs50Project/Notepad/build/CMakeFiles/Notepad.dir
-/home/sarath/projects/cs50Project/Notepad/build/CMakeFiles/run.dir
-/home/sarath/projects/cs50Project/Notepad/build/CMakeFiles/edit_cache.dir
-/home/sarath/projects/cs50Project/Notepad/build/CMakeFiles/rebuild_cache.dir
-/home/sarath/projects/cs50Project/Notepad/build/CMakeFiles/list_install_components.dir
-/home/sarath/projects/cs50Project/Notepad/build/CMakeFiles/install.dir
-/home/sarath/projects/cs50Project/Notepad/build/CMakeFiles/install/local.dir
-/home/sarath/projects/cs50Project/Notepad/build/CMakeFiles/install/strip.dir
-/home/sarath/projects/cs50Project/Notepad/build/CMakeFiles/Notepad_autogen.dir
