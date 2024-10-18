@@ -37,7 +37,7 @@ void Server::start() {
         throw std::runtime_error("Failed to listen on socket"); // Throw an exception for listening failure
     }
 
-    std::cout << "Server listening on port " << port << std::endl; // Output to indicate server is running
+    std::cout << "Server listening on " << "http://localhost:" << port << std::endl; // Output to indicate server is running
 
     // Main loop to accept and handle client connections
     while (running) {

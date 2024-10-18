@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "Constants.h"
 #include <string>
 #include <yaml-cpp/yaml.h>
 
