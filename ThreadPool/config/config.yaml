@@ -1,0 +1,3 @@
+server:
+  port: 8080
+  thread_count: 4
