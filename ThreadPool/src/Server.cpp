@@ -5,7 +5,7 @@
 #include <unistd.h>         // Include unistd.h for close() function
 #include <cstring>          // Include cstring for memory manipulation functions
 #include <stdexcept>        // Include stdexcept for exception handling
-
+#include "Constants.h"
 // Constructor to initialize the server with the given port and thread count
 Server::Server(int port, int threadCount) 
     : port(port), running(false), threadCount(threadCount) {} // Initialize member variables
