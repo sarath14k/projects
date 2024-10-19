@@ -1,7 +1,7 @@
 #include "Config.h"
 #include <iostream>
 #include "Constants.h"
-using namespace Constants;
+using namespace constants;
 
 
 Config::Config(const std::string& filename) {

@@ -2,7 +2,7 @@
 #define CONSTANT_H
 #include <string>
 
-namespace Constants {
+namespace constants {
     const std::string CONFIG_FILE_PATH = "config/config.yaml"; // Path to the configuration file
     const std::string SERVER = "server";
     const std::string CLIENT = "client";
