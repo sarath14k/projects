@@ -52,7 +52,7 @@ void Server::start() { // Method to start the server
     Epoll epoll(max_event); // Create an Epoll instance with a maximum events
     epoll.addFd(server_fd); // Add the server socket file descriptor to the epoll instance
 
-    std::cout << "Server listening on " << server_ip << ":" << port << std::endl; // Log the server status
+    std::cout << "Server listening on http://" << server_ip << ":" << port << std::endl; // Log the server status
 
     // Thread to handle server shutdown on input
     std::thread input_thread([]() {
