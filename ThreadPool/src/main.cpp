@@ -1,6 +1,8 @@
 #include "Client.h"
 #include "Server.h"
 #include <iostream>
+#include "Constants.h"
+using namespace Constants;
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -8,10 +10,10 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (std::string(argv[1]) == "server") {
+    if (std::string(argv[1]) == SERVER) {
         Server server;
         server.start();
-    } else if (std::string(argv[1]) == "client") {
+    } else if (std::string(argv[1]) == CLIENT) {
         Client client;
         client.start();
     } else {

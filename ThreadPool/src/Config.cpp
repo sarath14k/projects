@@ -1,42 +1,45 @@
 #include "Config.h"
 #include <iostream>
+#include "Constants.h"
+using namespace Constants;
+
 
 Config::Config(const std::string& filename) {
     config = YAML::LoadFile(filename);
 }
 
 std::string Config::getServerIP() const {
-    return config["server"]["ip"].as<std::string>();
+    return config[SERVER][IP].as<std::string>();
 }
 
 int Config::getServerPort() const {
-    return config["server"]["port"].as<int>();
+    return config[SERVER][PORT].as<int>();
 }
 
 int Config::getThreadCount() const {
-    return config["server"]["thread_count"].as<int>();
+    return config[SERVER][THREAD_COUNT].as<int>();
 }
 
 int Config::getBacklogSize() const {
-    return config["server"]["backlog_size"].as<int>();
+    return config[SERVER][BACKLOG_SIZE].as<int>();
 }
 
 int Config::getPollTimeout() const {
-    return config["server"]["poll_timeout_ms"].as<int>();
+    return config[SERVER][POLL_TIMEOUT_MS].as<int>();
 }
 
 int Config::getMaxEvents() const {
-    return config["server"]["max_events"].as<int>();
+    return config[SERVER][MAX_EVENTS].as<int>();
 }
 
 int Config::getBufferSize() const {
-    return config["server"]["buffer_size"].as<int>();
+    return config[SERVER][BUFFER_SIZE].as<int>();
 }
 
 std::string Config::getClientIP() const {
-    return config["client"]["server_ip"].as<std::string>();
+    return config[CLIENT][IP].as<std::string>();
 }
 
 int Config::getClientPort() const {
-    return config["client"]["server_port"].as<int>();
+    return config[CLIENT][PORT].as<int>();
 }

@@ -8,6 +8,6 @@ server:
   buffer_size: 1024
 
 client:
-  server_ip: "127.0.0.1"
-  server_port: 8080
+  ip: "127.0.0.1"
+  port: 8080
   buffer_size: 1024

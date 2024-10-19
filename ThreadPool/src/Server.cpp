@@ -5,9 +5,12 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <cstring>
+#include "Constants.h"
+using namespace Constants;
+
 
 void Server::start() {
-    Config config("config/config.yaml");
+    Config config(CONFIG_FILE_PATH);
     int port = config.getServerPort();
     int backlog_size = config.getBacklogSize();
     int buffer_size = config.getBufferSize();
