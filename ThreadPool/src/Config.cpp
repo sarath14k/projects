@@ -1,21 +1,42 @@
 #include "Config.h"
-#include "Constants.h"
-#include <yaml-cpp/yaml.h> // Include the yaml-cpp header
+#include <iostream>
 
-bool Config::load(const std::string& filename) {
-    YAML::Node config = YAML::LoadFile(filename); // Load YAML file
-
-    // Directly access the server node values
-    port = config[Constants::SERVER][Constants::PORT].as<int>();
-    threadCount = config[Constants::SERVER][Constants::THREAD_COUNT].as<int>();
-
-    return true; // Return true if loading was successful
+Config::Config(const std::string& filename) {
+    config = YAML::LoadFile(filename);
 }
 
-int Config::getPort() const {
-    return port; // Return the port number
+std::string Config::getServerIP() const {
+    return config["server"]["ip"].as<std::string>();
+}
+
+int Config::getServerPort() const {
+    return config["server"]["port"].as<int>();
 }
 
 int Config::getThreadCount() const {
-    return threadCount; // Return the thread count
+    return config["server"]["thread_count"].as<int>();
+}
+
+int Config::getBacklogSize() const {
+    return config["server"]["backlog_size"].as<int>();
+}
+
+int Config::getPollTimeout() const {
+    return config["server"]["poll_timeout_ms"].as<int>();
+}
+
+int Config::getMaxEvents() const {
+    return config["server"]["max_events"].as<int>();
+}
+
+int Config::getBufferSize() const {
+    return config["server"]["buffer_size"].as<int>();
+}
+
+std::string Config::getClientIP() const {
+    return config["client"]["server_ip"].as<std::string>();
+}
+
+int Config::getClientPort() const {
+    return config["client"]["server_port"].as<int>();
 }

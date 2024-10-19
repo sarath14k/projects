@@ -6,12 +6,21 @@
 
 class Config {
 public:
-    bool load(const std::string& filename); // Load configuration from a file
-    int getPort() const;                     // Get the port number
-    int getThreadCount() const;              // Get the thread count
+    Config(const std::string& filename);
+    
+    std::string getServerIP() const;
+    int getServerPort() const;
+    int getThreadCount() const;
+    int getBacklogSize() const;
+    int getPollTimeout() const;
+    int getMaxEvents() const;
+    int getBufferSize() const;
+
+    std::string getClientIP() const;
+    int getClientPort() const;
+
 private:
-    int port;           // Port number
-    int threadCount;    // Number of threads
+    YAML::Node config;
 };
 
 #endif // CONFIG_H

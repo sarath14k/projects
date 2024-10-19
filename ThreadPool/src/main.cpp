@@ -1,19 +1,23 @@
-#include "Config.h"
+#include "Client.h"
 #include "Server.h"
-#include "Constants.h"
+#include <iostream>
 
-int main() {
-    Config config; // Create a Config object
-    // Load configuration from the YAML file and check if it was successful
-    if (!config.load(Constants::CONFIG_FILE_PATH)) {
-        return 1; // Exit if configuration loading failed
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <server|client>" << std::endl;
+        return 1;
     }
-    
-    int port = config.getPort(); // Get port
-    int threadCount = config.getThreadCount(); // Get thread count
-    // Create a Server object with the port and thread count from configuration
-    Server server(port, threadCount);
-    server.start(); // Start the server to listen for incoming connections
 
-    return 0; // Exit the program
+    if (std::string(argv[1]) == "server") {
+        Server server;
+        server.start();
+    } else if (std::string(argv[1]) == "client") {
+        Client client;
+        client.start();
+    } else {
+        std::cerr << "Invalid argument. Use 'server' or 'client'." << std::endl;
+        return 1;
+    }
+
+    return 0;
 }

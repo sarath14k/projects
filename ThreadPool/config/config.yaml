@@ -1,3 +1,13 @@
 server:
   port: 8080
+  ip: "127.0.0.1"
   thread_count: 4
+  backlog_size: 10
+  poll_timeout_ms: 1000
+  max_events: 10
+  buffer_size: 1024
+
+client:
+  server_ip: "127.0.0.1"
+  server_port: 8080
+  buffer_size: 1024
