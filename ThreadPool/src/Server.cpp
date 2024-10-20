@@ -9,98 +9,106 @@
 #include <thread>                // Include for multithreading
 #include <atomic>                // Include for atomic variables
 #include <csignal>               // Include for signal handling
-#include "GlobalState.h"       // Assuming you have a header for global state management
+#include "GlobalState.h"         // Include the header for global state management
 
 using namespace constants;      // Use the constants namespace
 
-void signalHandler(int signum) {
-    std::cout << "Shutting down server..." << std::endl;
-    running = false; // Set running to false to exit the loop
-}
-
-void Server::start() { // Method to start the server
-    Config config(CONFIG_FILE_PATH); // Load the configuration from the YAML file
-    int port = config.getServerPort(); // Get the server port from configuration
-    int backlog_size = config.getBacklogSize(); // Get the backlog size for listen()
-    int buffer_size = config.getBufferSize(); // Get the buffer size for receiving messages
+void Server::start() {
+    // Load the configuration from the YAML file
+    Config config(CONFIG_FILE_PATH);
+    int port = config.getServerPort();
+    int backlog_size = config.getBacklogSize();
+    int buffer_size = config.getBufferSize();
     int max_event = config.getMaxEvents();
     std::string server_ip = config.getServerIP();
 
-    // Register signal handler for SIGINT (Ctrl+C)
-    std::signal(SIGINT, signalHandler);
+    std::signal(SIGINT, signalHandler); // Register a signal handler for SIGINT (Ctrl+C)
 
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0); // Create a socket for the server
-    if (server_fd < 0) { // Check for errors in socket creation
+    // Create a socket for the server
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0) {
         std::cerr << "Error creating socket." << std::endl;
         return; // Exit if socket creation fails
     }
 
-    sockaddr_in server_addr; // Create a sockaddr_in structure for the server address
-    server_addr.sin_family = AF_INET; // Set address family to IPv4
-    server_addr.sin_addr.s_addr = INADDR_ANY; // Accept connections from any IP address
-    server_addr.sin_port = htons(port); // Set the port number, converting to network byte order
+    sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET; 
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(port);
 
     if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        std::cerr << "Error binding socket. Error code: " << errno << std::endl;
-        perror("Bind failed");  // This will give you a more descriptive error message
+        std::cerr << "Error binding socket." << std::endl;
         close(server_fd);
-        return;
+        return; // Exit if binding fails
     }
 
-    listen(server_fd, backlog_size); // Start listening for incoming connections with a specified backlog size
+    listen(server_fd, backlog_size); // Start listening for incoming connections
 
-    Epoll epoll(max_event); // Create an Epoll instance with a maximum events
-    epoll.addFd(server_fd); // Add the server socket file descriptor to the epoll instance
+    Epoll epoll(max_event);
+    epoll.addFd(server_fd);
 
-    std::cout << "Server listening on http://" << server_ip << ":" << port << std::endl; // Log the server status
+    std::cout << "Server listening on http://" << server_ip << ":" << port << std::endl;
 
-    // Thread to handle server shutdown on input
-    std::thread input_thread([]() {
-        std::string command;
-        while (running) {
-            std::getline(std::cin, command);
-            if (command == "exit" || command == "quit") {
-                running = false; // Stop the server
-                std::cout << "Shutting down the server..." << std::endl;
-            }
-        }
-    });
+    // Main server loop
+    while (running.load()) {
+        auto activeFds = epoll.waitForEvents(500); // Wait for events with a timeout
 
-    while (running) { // Main server loop
-        auto activeFds = epoll.waitForEvents(-1); // Wait indefinitely for events
-        for (int fd : activeFds) { // Iterate over active file descriptors
-            if (fd == server_fd) { // Check if the active fd is the server socket
-                int client_fd = accept(server_fd, nullptr, nullptr); // Accept a new client connection
-                if (client_fd < 0) { // Check for errors in accepting a connection
+        for (int fd : activeFds) {
+            if (fd == server_fd) {
+                int client_fd = accept(server_fd, nullptr, nullptr);
+                if (client_fd < 0) {
                     std::cerr << "Error accepting connection." << std::endl;
                     continue; // Skip to the next iteration on error
                 }
-                epoll.addFd(client_fd); // Add the client socket to the epoll instance
-                std::cout << "New client " << client_fd << " connected." << std::endl; // Log the new client connection
-            } else { // Otherwise, handle incoming data from a connected client
-                char buffer[buffer_size]; // Create a buffer for incoming messages
-                ssize_t count = recv(fd, buffer, buffer_size - 1, 0); // Receive data from the client
-                if (count <= 0) { // Check if the client has disconnected or an error occurred
+                epoll.addFd(client_fd);
+                std::cout << "New client " << client_fd << " connected." << std::endl;
+                std::cout << "\nPress ctrl + c to quit server\n";
+
+            } else {
+                char buffer[buffer_size];
+                ssize_t count = recv(fd, buffer, buffer_size - 1, 0);
+                if (count <= 0) {
                     std::cerr << "Client " << fd << " disconnected." << std::endl;
-                    close(fd); // Close the client socket
-                    epoll.removeFd(fd); // Remove the client socket from the epoll instance
-                } else { // Data was received successfully
-                    buffer[count] = '\0'; // Null-terminate the buffer to make it a valid string
-                    std::cout << "Received: " << buffer << std::endl; // Log the received message
-                    sendResponse(fd, std::string(buffer));                
+                    close(fd);
+                    epoll.removeFd(fd);
+                } else {
+                    buffer[count] = '\0'; // Null-terminate the buffer
+                    std::cout << "Received: " << buffer << std::endl;
+
+                    // Check for exit command
+                    if (strcmp(buffer, "exit") == 0) {
+                    std::cerr << "Client " << fd << " disconnected." << std::endl;
+                        std::string clientShutdownMessage = "Thanks for connecting Client-" + std::to_string(fd);
+                        send(fd, clientShutdownMessage.c_str(), clientShutdownMessage.length(), 0);
+                        close(fd);
+                        epoll.removeFd(fd);
+                        break; // Exit the loop
+                    }
+
+                    // Otherwise, handle the message as usual
+                    sendResponse(fd, std::string(buffer));
                 }
             }
         }
     }
 
+    // Notify all clients that the server is shutting down
+    for (int fd : epoll.getAllFds()) {
+        std::string shutdownMessage = "Server is shutting down. Closing connection.";
+        send(fd, shutdownMessage.c_str(), shutdownMessage.length(), 0);
+        close(fd);
+    }
+
     close(server_fd); // Close the server socket
-    input_thread.join(); // Wait for the input thread to finish
+    std::cout << "Server has shut down." << std::endl; // Log server shutdown
 }
 
 void Server::sendResponse(int client_fd, const std::string& message) {
-    std::string response = "Server: Received your message: " + message;
-    ssize_t bytes_sent = send(client_fd, response.c_str(), response.length(), 0);
-    if (bytes_sent < 0) {
-        std::cerr << "Error sending response to the client: " << client_fd << std::endl;
+    if (running.load()) { // Only send if the server is still running
+        std::string response = "Server: Received your message: " + message; // Prepare the response message
+        ssize_t bytes_sent = send(client_fd, response.c_str(), response.length(), 0); // Send the response to the client
+        if (bytes_sent < 0) {
+            std::cerr << "Error sending message to client." << std::endl; // Print error if sending fails
+        }
     }
 }

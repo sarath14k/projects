@@ -22,11 +22,14 @@ void Epoll::addFd(int fd) { // Method to add a file descriptor to the epoll inst
     // Add the file descriptor to the epoll instance
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &event) < 0) {
         std::cerr << "Error adding file descriptor to epoll." << std::endl; // Print error if adding fails
+    } else {
+        fds[fd] = fd; // Track the added file descriptor
     }
 }
 
 void Epoll::removeFd(int fd) { // Method to remove a file descriptor from the epoll instance
     epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, nullptr); // Remove the file descriptor
+    fds.erase(fd); // Remove from the tracking map
 }
 
 std::vector<int> Epoll::waitForEvents(int timeout) { // Method to wait for events on monitored file descriptors
@@ -38,4 +41,13 @@ std::vector<int> Epoll::waitForEvents(int timeout) { // Method to wait for event
     }
 
     return activeFds; // Return the vector of active file descriptors
+}
+
+// New function to get all tracked file descriptors
+std::vector<int> Epoll::getAllFds() {
+    std::vector<int> allFds;
+    for (const auto& pair : fds) {
+        allFds.push_back(pair.first); // Add each tracked fd to the vector
+    }
+    return allFds; // Return the vector of all fds
 }

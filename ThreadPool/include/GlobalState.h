@@ -1,9 +1,10 @@
-// GlobalState.h
-#ifndef GLOBAL_STATE_H
-#define GLOBAL_STATE_H
+#ifndef GLOBALSTATE_H
+#define GLOBALSTATE_H
 
 #include <atomic>
 
-extern std::atomic<bool> running; // Declare the variable as external
+extern std::atomic<bool> running; // Declare running as extern
 
-#endif // GLOBAL_STATE_H
+void signalHandler(int signum); // Declare the signal handler function
+
+#endif // GLOBALSTATE_H

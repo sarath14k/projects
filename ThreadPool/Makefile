@@ -25,7 +25,7 @@ client-run: all                  # Define the target to run the client after bui
 
 server-run: all                  # Define the target to run the server after building
 	@echo "Starting server..."     # Print a message indicating the server is starting
-	./$(BIN_DIR)/chat server       # Execute the server with the 'server' argument
+	@./run_server.sh || true       # Execute the server with the shell script
 
 clean:                           # Define the clean target to remove compiled files
 	rm -rf $(BIN_DIR)/*.o $(BIN_DIR)/chat # Remove all object files and the chat executable
