@@ -1,5 +1,4 @@
 
-Here’s a sample `README.md` file for your Deribit trading API project. You can customize it further to suit your project's specific details.
 
 ```markdown
 # Deribit Trading API
@@ -13,7 +12,6 @@ This project is a simple command-line application that interacts with the Deribi
 - [Installation](#installation)
 - [Usage](#usage)
 - [Contributing](#contributing)
-- [License](#license)
 
 ## Features
 
@@ -70,15 +68,3 @@ This project is a simple command-line application that interacts with the Deribi
 
 Contributions are welcome! Please open an issue or submit a pull request if you have suggestions or improvements.
 
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-```
-
-### Instructions for Customization
-- **Project URL**: Replace `https://github.com/yourusername/deribit-trading-api.git` with the actual URL of your GitHub repository.
-- **License Section**: If you choose a different license, adjust the license section accordingly.
-- **Additional Features**: Add or modify the features section based on any additional functionality you may have implemented.
-- **Dependencies**: If there are any specific versions of the libraries that are required, include that information in the installation section. 
-
-You can copy this content into a file named `README.md` in your project's root directory.
