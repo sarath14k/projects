@@ -1,0 +1,11 @@
+api:
+  key: "bL4B-uoY"  # Client ID
+  secret: "5CX0rzMbCfHzlzN6MXgRIR6Yq_p_jZKUtxrNLWYLvpM"  # Client Secret
+  base_url: "https://test.deribit.com/"
+
+settings:
+  symbols:
+    - "BTC-PERPETUAL"
+    - "ETH-PERPETUAL"
+  order_amount: 1.0
+  default_price: 30000
