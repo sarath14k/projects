@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp> // Include a JSON library like nlohmann/json
 #include <curl/curl.h>
 #include "config.h"
+using namespace Config;
 
 class DeribitAPI {
 public:
@@ -12,8 +13,8 @@ public:
     std::string authenticate();
     std::string placeOrder(double amount, const std::string& instrument_name, const std::string& order_type);
     std::string cancelOrder(const std::string& order_id);
-    std::string modifyOrder(const std::string& order_id, double amount, double price); // New function declaration    std::string getOrderbook(const std::string& instrument_name);
-        std::string getOrderBook(const std::string& instrument_name, int depth); // New function declaration
+    std::string modifyOrder(const std::string& order_id, double amount, double price); 
+    std::string getOrderBook(const std::string& instrument_name, int depth); 
     std::string viewCurrentPositions();
 
 private:

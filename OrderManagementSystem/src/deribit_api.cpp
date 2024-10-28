@@ -65,7 +65,7 @@ std::string DeribitAPI::placeOrder(double amount, const std::string& instrument_
 std::string DeribitAPI::cancelOrder(const std::string& order_id) {
     std::string url = BASE_URL + "private/cancel?order_id=" + order_id;
 
-    std::string response = performRequest(url, "", "GET");
+    std::string response = performRequest(url, "", GET);
     return response;
 }
 
@@ -73,13 +73,13 @@ std::string DeribitAPI::modifyOrder(const std::string& order_id, double amount, 
     std::string url = BASE_URL + "private/edit?advanced=implv&amount=" + std::to_string(amount) +
                       "&order_id=" + order_id + "&price=" + std::to_string(price);
 
-    std::string response = performRequest(url, "", "GET");
+    std::string response = performRequest(url, "", GET);
     return response;
 }
 
 std::string DeribitAPI::getOrderBook(const std::string& instrument_name, int depth) {
     std::string url = BASE_URL + "public/get_order_book?depth=" + std::to_string(depth) + "&instrument_name=" + instrument_name;
-    std::string response = performRequest(url, "", "GET");
+    std::string response = performRequest(url, "", GET);
     return response;
 }
 std::string DeribitAPI::viewCurrentPositions() {
