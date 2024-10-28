@@ -1,6 +1,3 @@
-
-
-```markdown
 # Deribit Trading API
 
 This project is a simple command-line application that interacts with the Deribit trading platform using its API. Users can place orders, cancel orders, modify orders, get the order book, and view current positions.
