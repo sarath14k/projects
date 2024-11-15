@@ -1,0 +1,1 @@
+find . -type f -name 'a*' // To list all files starting with 'a' in a directory and its subdirectories

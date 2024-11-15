@@ -1,0 +1,71 @@
+" Basic settings
+set nocompatible              " Disable compatibility with old versions of Vi
+filetype plugin indent on     " Enable filetype detection, plugin, and indentation
+
+" UI Settings
+syntax on                     " Enable syntax highlighting
+set number                    " Show line numbers
+set relativenumber            " Show relative line numbers
+set cursorline                " Highlight current line
+set showmatch                 " Highlight matching parentheses
+set wildmenu                  " Enable command-line completion
+set lazyredraw                " Improves scrolling for complex files
+set showcmd                   " Show (partial) command in the last line of the screen
+set laststatus=2              " Always display the status line
+set ruler                     " Show the cursor position all the time
+set scrolloff=8               " Minimal number of screen lines to keep above and below the cursor
+set guifont=Courier\ New\ 14
+colorscheme desert
+" Indentation Settings
+set tabstop=4                 " Number of spaces that a <Tab> counts for
+set shiftwidth=4              " Number of spaces to use for each step of (auto)indent
+set expandtab                  " Convert tabs to spaces
+set autoindent                " Auto-indent new lines
+set smartindent               " Enable smart indenting
+
+" Search Settings
+set hlsearch                  " Highlight all search results
+set incsearch                 " Show partial matches for a search phrase
+set ignorecase                " Ignore case when searching
+set smartcase                 " Override 'ignorecase' if search contains capital letters
+
+" Backup and Undo Settings
+set undofile                  " Save undo history to an undo file
+set backup                    " Enable backups
+set writebackup               " Enable backup before overwriting
+set backupdir=~/.vim/backups  " Set backup directory
+set directory=~/.vim/swaps    " Set swap file directory
+set undodir=~/.vim/undo       " Set undo directory
+
+" Custom Key Mappings
+nnoremap <Space> :noh<CR>     " Clear search highlighting with Space
+nnoremap <C-n> :NERDTreeToggle<CR>  " Toggle NERDTree with Ctrl+n
+nnoremap <C-p> :Files<CR>     " FZF Files shortcut
+
+" Clipboard settings (for system clipboard)
+set clipboard=unnamedplus     " Use system clipboard
+
+" Status Line
+set statusline=%F%m%r%h%w\ [%{&fileformat}]\ [%{&fileencoding}]\ [%{&filetype}]\ %=%l,%c%V\ [%p%%]
+
+" Initialize vim-plug for plugin management
+call plug#begin('~/.vim/plugged')
+
+" Add NERDTree plugin
+Plug 'preservim/nerdtree'
+
+" YouCompleteMe plugin for autocompletion
+Plug 'ycm-core/YouCompleteMe'
+
+call plug#end()
+
+" YouCompleteMe settings
+let g:ycm_log_level = 'DEBUG'         " Set log level for YouCompleteMe
+set completeopt=menuone,noinsert,noselect  " Completion options
+let g:ycm_auto_trigger = 1             " Enable auto-triggering for completion
+
+" NERDTree settings
+let NERDTreeShowHidden=1                " Show hidden files in NERDTree
+let NERDTreeIgnore=['\.pyc$', '\~$']    " Ignore temporary files in NERDTree
+
+

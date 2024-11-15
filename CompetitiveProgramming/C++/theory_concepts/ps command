@@ -1,0 +1,66 @@
+Difference bw ps -ax and ps -aef
+
+The commands ps -ax and ps -aef both list processes, but they display different information and use slightly different options.
+
+ps -ax:
+
+The -a option shows processes associated with all terminals, not just the current one.
+The -x option includes processes that do not have a controlling terminal (like background services and daemons).
+
+Output includes only essential details like the process ID (PID), TTY, time, and command.
+ps -aef:
+
+The -a option similarly shows all users' processes.
+The -e option displays all processes (like -a and -x together, so all processes with and without a terminal).
+The -f option displays a full format listing, which includes more details like the user, PID, parent PID (PPID), start time, and the full command with arguments.
+Key Differences:
+
+ps -ax provides a simpler, more minimal output (without additional details like user or PPID).
+ps -aef gives a detailed view with more process metadata (such as user, PPID, and full command).
+
+
+Here are example commands with their respective outputs:
+
+ps -ax:
+
+ps -ax
+Example output:
+
+
+ PID TTY      STAT   TIME COMMAND
+    1 ?        Ss     0:01 /sbin/init
+  839 ?        Sl     0:00 /usr/bin/gnome-shell
+ 1324 ?        Ss     0:00 /usr/lib/systemd/systemd --user
+ 1452 ?        Ss     0:00 /usr/bin/ssh-agent -s
+This output shows:
+
+PID: Process ID.
+TTY: Terminal associated with the process.
+STAT: Process state.
+TIME: Amount of CPU time used.
+COMMAND: The name of the command or program being run.
+ps -aef:
+bash
+Copy code
+ps -aef
+Example output:
+
+sql
+
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 08:00 ?        00:00:01 /sbin/init
+user      839   825  0 08:00 ?        00:00:00 /usr/bin/gnome-shell
+user     1324  1322  0 08:00 ?        00:00:00 /usr/lib/systemd/systemd --user
+user     1452  1430  0 08:02 ?        00:00:00 /usr/bin/ssh-agent -s
+
+This output includes more details:
+
+UID: The user running the process.
+PID: Process ID.
+PPID: Parent Process ID (the process that spawned this one).
+C: CPU utilization percentage.
+STIME: Start time of the process.
+TTY: Terminal associated with the process.
+TIME: Amount of CPU time used.
+CMD: The command and arguments that started the process.
+As you can see, ps -aef provides more information than ps -ax.

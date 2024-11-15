@@ -1,0 +1,105 @@
+1. Paradigm
+C:
+
+Procedural programming language.
+Focuses on functions and the sequence of actions to be performed.
+C++:
+
+Multi-paradigm language (supports procedural, object-oriented, and generic programming).
+Emphasizes the concept of objects, which can encapsulate both data and functions.
+2. Object-Oriented Programming (OOP)
+C:
+
+Does not support object-oriented programming directly.
+Lacks features such as classes and inheritance.
+C++:
+
+Fully supports object-oriented programming.
+Introduces classes, inheritance, polymorphism, encapsulation, and abstraction.
+3. Data Abstraction
+C:
+
+Uses structures (struct) to group related data but does not support encapsulation.
+C++:
+
+Uses classes to encapsulate data and functions, providing better data abstraction and protection.
+4. Function Overloading
+C:
+
+Does not support function overloading (multiple functions with the same name but different parameters).
+C++:
+
+Supports function overloading, allowing multiple functions with the same name as long as their parameter lists are different.
+5. Operator Overloading
+C:
+
+Does not support operator overloading.
+C++:
+
+Allows operators (like +, -, *) to be redefined for user-defined types, enabling intuitive syntax.
+6. Standard Library
+C:
+
+The standard library (C Standard Library) primarily consists of functions for handling input/output, string manipulation, and memory management.
+C++:
+
+Includes the C Standard Library and the C++ Standard Library, which features extensive data structures (like vectors, lists, maps) and algorithms (STL - Standard Template Library).
+7. Memory Management
+C:
+
+Manual memory management using malloc(), calloc(), realloc(), and free().
+C++:
+
+Provides dynamic memory management using new and delete operators, making it easier to allocate and deallocate memory for objects.
+8. Namespaces
+C:
+
+Does not support namespaces. All identifiers must be unique, which can lead to name conflicts in larger programs.
+C++:
+
+Introduces namespaces to avoid naming conflicts and organize code.
+9. Exception Handling
+C:
+
+Does not have built-in support for exception handling. Error handling is typically done through return codes.
+C++:
+
+Supports exception handling using try, catch, and throw, allowing for more robust error handling.
+10. Compatibility
+C:
+
+C programs can usually be compiled with a C++ compiler, but C++ programs cannot be compiled with a C compiler due to features like classes.
+C++:
+
+Designed to be compatible with C; most valid C code is valid C++ code.
+11. Template Programming
+C:
+
+Does not support templates.
+C++:
+
+Supports template programming, allowing the creation of generic functions and classes that can operate with any data type.
+12. Use Cases
+C:
+
+Preferred for system programming, embedded systems, and performance-critical applications where low-level hardware interaction is required.
+C++:
+
+Commonly used for application software, game development, graphical applications, and systems where OOP is beneficial.
+
+
+Summary Table
+
+Feature	                C	                    C++
+Paradigm	            Procedural	            Multi-paradigm (OOP, etc.)
+OOP Support	            No	                    Yes
+Data Abstraction	    Structs only	        Classes
+Function Overloading	No	                    Yes
+Operator Overloading	No	                    Yes
+Standard Library	    C Standard Library	    C++ Standard Library + STL
+Memory Management	    Manual (malloc, free)	new and delete
+Namespaces	            No	                    Yes
+Exception Handling	    No	                    Yes
+Compatibility	        N/A	Mostly compatible with C
+Templates	No	Yes
+Common Use Cases	System programming	Application software, games

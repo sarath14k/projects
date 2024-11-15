@@ -1,0 +1,82 @@
+A semaphore is a synchronization primitive used in concurrent programming to control access to a 
+shared resource by multiple processes or threads. It helps prevent race conditions and ensure that 
+only a specific number of threads can access a critical section of code at a given time
+
+Key Concepts of Semaphores:
+Semaphore Value:
+---------------
+A semaphore is essentially a counter that represents the number of permits available.
+The counter is initialized to a certain value, indicating how many threads can access the shared resource 
+simultaneously.
+
+When a thread tries to access the shared resource, it decrements the semaphore value by 1.
+If the semaphore value is 0, the thread is blocked until another thread releases the resource by increment
+the semaphore value.
+
+Two Types of Semaphores:
+------------------------
+Binary Semaphore (Mutex): This is similar to a mutex and can have only two values, 0 or 1. It is used for
+exclusive access to a resource (one thread at a time).
+
+Counting Semaphore: This can have a value greater than one, allowing multiple threads to access a
+resource up to a certain limit.
+
+
+Operations:
+----------
+Wait (P operation): This operation decreases the semaphore's counter. If the counter is greater than zero,
+the thread proceeds. If the counter is zero, the thread is blocked until the counter is greater than zero.
+
+Signal (V operation): This operation increases the semaphore's counter. If any threads are waiting,
+one of them will be unblocked.
+
+
+#include <iostream>
+#include <pthread.h>
+#include <semaphore.h>
+#include <unistd.h>
+
+sem_t semaphore;
+
+void* threadFunction(void* arg) {
+    sem_wait(&semaphore); // Decrement the semaphore and wait if it is zero
+    std::cout << "Thread " << (long)arg << " is in the critical section.\n";
+    sleep(1); // Simulate work in the critical section
+    std::cout << "Thread " << (long)arg << " is leaving the critical section.\n";
+    sem_post(&semaphore); // Increment the semaphore, allowing another thread to enter
+    return NULL;
+}
+
+int main() {
+    sem_init(&semaphore, 0, 2); // Initialize semaphore with 2 permits
+
+    pthread_t threads[5];
+    for (long i = 0; i < 5; i++) {
+        pthread_create(&threads[i], NULL, threadFunction, (void*)i);
+    }
+
+    for (int i = 0; i < 5; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    sem_destroy(&semaphore); // Destroy the semaphore
+    return 0;
+}
+
+
+
+Explanation:
+sem_init(&semaphore, 0, 2): Initializes the semaphore with 2 permits, meaning two threads can enter the critical section simultaneously.
+sem_wait(&semaphore): Decrements the semaphore. If the counter is zero, the thread waits.
+sem_post(&semaphore): Increments the semaphore, signaling that the resource is available.
+
+
+Use Cases:
+Controlling access to a limited pool of resources, like a connection pool.
+Managing access to a file or database that should only be accessed by a limited number of threads concurrently.
+Implementing producer-consumer problems.
+Semaphores are a powerful tool for managing concurrency, ensuring that shared resources are accessed in a controlled and predictable manner.
+
+
+Concurrent Programming is the general approach to executing multiple tasks simultaneously, while Multithreading is a specific technique within concurrent programming that involves running multiple threads within a single process.
+Both concepts are essential for building efficient, responsive, and scalable applications, particularly in modern multi-core and distributed computing environments.
