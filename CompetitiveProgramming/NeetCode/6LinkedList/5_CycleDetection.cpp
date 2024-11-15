@@ -3,21 +3,21 @@ using namespace std;
 
 /**
  * Definition for singly-linked list.
- * struct ListNode {
+ * struct Node {
  *     int val;
- *     ListNode *next;
- *     ListNode() : val(0), next(nullptr) {}
- *     ListNode(int x) : val(x), next(nullptr) {}
- *     ListNode(int x, ListNode *next) : val(x), next(next) {}
+ *     Node *next;
+ *     Node() : val(0), next(nullptr) {}
+ *     Node(int x) : val(x), next(nullptr) {}
+ *     Node(int x, Node *next) : val(x), next(next) {}
  * };
  */
 
-struct ListNode {
+struct Node {
     int val;
-    ListNode* next;
-    ListNode() : val(0), next(nullptr) {}
-    ListNode(int x) : val(x), next(nullptr) {}
-    ListNode(int x, ListNode* next) : val(x), next(next) {}
+    Node* next;
+    Node() : val(0), next(nullptr) {}
+    Node(int x) : val(x), next(nullptr) {}
+    Node(int x, Node* next) : val(x), next(next) {}
 };
 
 class Solution {
@@ -27,22 +27,22 @@ public:
      * @param head: Pointer to the head of the linked list.
      * @return: True if a cycle is found, otherwise false.
      */
-    bool hasCycle(ListNode* head) {
+    bool hasCycle(Node* head) {
         // Initialize two pointers: fast and slow
-        ListNode* fast = head;
-        ListNode* slow = head;
+        Node* fast = head;
+        Node* slow = head;
 
         // Traverse the list
         while (fast != nullptr && fast->next != nullptr) {
             fast = fast->next->next;  // Fast pointer moves 2 steps
             slow = slow->next;        // Slow pointer moves 1 step
-            
+
             // If they meet, there's a cycle
             if (fast == slow) {
                 return true;
             }
         }
-        
+
         return false;  // No cycle found
     }
 
@@ -53,13 +53,13 @@ public:
 };
 
 // Helper function to create a linked list from a vector of values
-ListNode* createList(const vector<int>& values) {
+Node* createList(const vector<int>& values) {
     if (values.empty()) return nullptr;
-    ListNode* head = new ListNode(values[0]);
-    ListNode* current = head;
+    Node* head = new Node(values[0]);
+    Node* current = head;
 
     for (int i = 1; i < values.size(); i++) {
-        current->next = new ListNode(values[i]);
+        current->next = new Node(values[i]);
         current = current->next;
     }
 
@@ -67,11 +67,11 @@ ListNode* createList(const vector<int>& values) {
 }
 
 // Function to create a cycle in the list for testing purposes
-void createCycle(ListNode* head, int pos) {
+void createCycle(Node* head, int pos) {
     if (pos < 0) return;
 
-    ListNode* tail = head;
-    ListNode* cycleStart = nullptr;
+    Node* tail = head;
+    Node* cycleStart = nullptr;
     int index = 0;
 
     while (tail->next != nullptr) {
@@ -93,7 +93,7 @@ int main() {
 
     // Create a linked list
     vector<int> list_values = {3, 2, 0, -4};
-    ListNode* head = createList(list_values);
+    Node* head = createList(list_values);
 
     // Create a cycle: position 1 means the cycle starts at value 2
     createCycle(head, 1);

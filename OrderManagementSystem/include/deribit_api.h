@@ -11,7 +11,7 @@ class DeribitAPI {
 public:
     DeribitAPI();
     std::string authenticate();
-    std::string placeOrder(double amount, const std::string& instrument_name, const std::string& order_type);
+    std::string placeOrder(double amount, const std::string& instrument_name, const std::string& order_type, double price = 0);
     std::string cancelOrder(const std::string& order_id);
     std::string modifyOrder(const std::string& order_id, double amount, double price); 
     std::string getOrderBook(const std::string& instrument_name, int depth); 

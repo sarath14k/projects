@@ -11,31 +11,31 @@ public:
     int characterReplacement(string s, int k) {
         vector<int> charCount(26, 0);  // Array to count occurrences of each character
         int maxCharCount = 0;           // Variable to store the count of the most frequent character in the current window
-        
-        int leftPointer = 0;             // Left pointer for the sliding window
-        int rightPointer = 0;            // Right pointer for the sliding window
-        
+
+        int left = 0;             // Left pointer for the sliding window
+        int right = 0;            // Right pointer for the sliding window
+
         int maxLength = 0;               // Variable to store the maximum length of substring found
-        
+
         // Iterate through the string with the right pointer
-        while (rightPointer < s.size()) {
+        while (right < s.size()) {
             // Count the current character
-            charCount[s[rightPointer] - 'A']++;
+            charCount[s[right] - 'A']++;
             // Update the maximum count of a single character in the current window
-            maxCharCount = max(maxCharCount, charCount[s[rightPointer] - 'A']);
-            
+            maxCharCount = max(maxCharCount, charCount[s[right] - 'A']);
+
             // If the number of characters to replace exceeds k
-            if (rightPointer - leftPointer + 1 - maxCharCount > k) {
+            if (right - left + 1 - maxCharCount > k) {
                 // Move the left pointer to reduce the window size
-                charCount[s[leftPointer] - 'A']--;
-                leftPointer++;
+                charCount[s[left] - 'A']--;
+                left++;
             }
-            
+
             // Update the maximum length of valid substring found
-            maxLength = max(maxLength, rightPointer - leftPointer + 1);
-            rightPointer++;  // Move the right pointer to expand the window
+            maxLength = max(maxLength, right - left + 1);
+            right++;  // Move the right pointer to expand the window
         }
-        
+
         return maxLength;  // Return the maximum length of substring found
     }
     /*

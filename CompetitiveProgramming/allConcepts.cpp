@@ -24,7 +24,7 @@
 #include <fstream>          // For file operations
 #include <filesystem>       // For filesystem operations
 #include <queue>
-
+#include <type_traits>
 void demonstrateSFINAE();       // Forward declaration
 void demonstrateConcepts();     // Forward declaration
 template <typename T>
@@ -959,68 +959,349 @@ void demonstrateArraySizeDeduction() {
     std::cout << std::endl;
 }
 
-void demonstrateSFINAE() {
-    // Your implementation here
-    std::cout << "SFINAE demonstration!" << std::endl;
+// SFINAE demonstration
+template <typename T, typename = void>
+struct IsPointer : std::false_type {};
+
+template <typename T>
+struct IsPointer<T, std::void_t<decltype(static_cast<T*>(nullptr))>> : std::true_type {};
+
+template <typename T>
+typename std::enable_if<IsPointer<T>::value, void>::type
+process(T ptr) {
+    std::cout << "Pointer type detected: " << ptr << std::endl;
 }
 
+template <typename T>
+typename std::enable_if<!IsPointer<T>::value, void>::type
+process(T value) {
+    std::cout << "Non-pointer type detected: " << value << std::endl;
+}
+
+void demonstrateSFINAE() {
+    int x = 10;
+    int* p = &x;
+
+    process(x);  // Calls the non-pointer version
+    process(p);  // Calls the pointer version
+}
 void demonstrateConcepts() {
     // Your implementation here
     std::cout << "Concepts demonstration!" << std::endl;
 }
 
 
+
 int main() {
+    std::cout << "Calling demonstrateSFINAE()\n";
     demonstrateSFINAE(); // Call function
+
+    std::cout << "Calling demonstrateConcepts()\n";
     demonstrateConcepts(); // Call function
+
+    std::cout << "Calling demonstrateTemplateSpecialization()\n";
     demonstrateTemplateSpecialization(); // Call function
+
+    std::cout << "Calling demonstrateStaticVariable()\n";
     demonstrateStaticVariable(); // Call function
+
+    std::cout << "Calling demonstrateDynamicMemory()\n";
     demonstrateDynamicMemory(); // Call function
+
+    std::cout << "Calling demonstrateFunctionPointer()\n";
     demonstrateFunctionPointer(); // Call function
+
+    std::cout << "Calling demonstrateArrayOfPointers()\n";
     demonstrateArrayOfPointers(); // Call function
+
+    std::cout << "Calling demonstrateStructs()\n";
     demonstrateStructs(); // Call function
+
+    std::cout << "Calling demonstrateUnion()\n";
     demonstrateUnion(); // Call function
+
+    std::cout << "Calling demonstrateCopy()\n";
     demonstrateCopy(); // Call function
+
+    std::cout << "Calling demonstrateForEach()\n";
     demonstrateForEach(); // Call function
+
+    std::cout << "Calling demonstrateFind()\n";
     demonstrateFind(); // Call function
+
+    std::cout << "Calling demonstrateSort()\n";
     demonstrateSort(); // Call function
+
+    std::cout << "Calling demonstrateReverse()\n";
     demonstrateReverse(); // Call function
+
+    std::cout << "Calling demonstrateAccumulate()\n";
     demonstrateAccumulate(); // Call function
+
+    std::cout << "Calling demonstrateTransform()\n";
     demonstrateTransform(); // Call function
+
+    std::cout << "Calling demonstrateFindIf()\n";
     demonstrateFindIf(); // Call function
+
+    std::cout << "Calling demonstrateRemoveIf()\n";
     demonstrateRemoveIf(); // Call function
+
+    std::cout << "Calling demonstrateShuffle()\n";
     demonstrateShuffle(); // Call function
+
+    std::cout << "Calling demonstrateAccumulateCustom()\n";
     demonstrateAccumulateCustom(); // Call function
+
+    std::cout << "Calling demonstrateMapLambda()\n";
     demonstrateMapLambda(); // Call function
+
+    std::cout << "Calling demonstrateSetCustomComparator()\n";
     demonstrateSetCustomComparator(); // Call function
+
+    std::cout << "Calling demonstrateConditionVariableMutex()\n";
     demonstrateConditionVariableMutex(); // Call function
+
+    std::cout << "Calling demonstrateSharedPtrCustomDeleter()\n";
     demonstrateSharedPtrCustomDeleter(); // Call function
+
+    std::cout << "Calling demonstrateWeakPtr()\n";
     demonstrateWeakPtr(); // Call function
+
+    std::cout << "Calling demonstrateArray()\n";
     demonstrateArray(); // Call function
+
+    std::cout << "Calling demonstrateForward(10)\n";
     demonstrateForward(10); // Call function
+
+    std::cout << "Calling demonstrateMove()\n";
     demonstrateMove(); // Call function
+
+    std::cout << "Calling demonstrateVectorCustomAllocator()\n";
     demonstrateVectorCustomAllocator(); // Call function
+
+    std::cout << "Calling demonstrateMoveVector()\n";
     demonstrateMoveVector(); // Call function
+
+    std::cout << "Calling demonstrateInitializerList()\n";
     demonstrateInitializerList(); // Call function
+
+    std::cout << "Calling demonstrateVariantVisitor()\n";
     demonstrateVariantVisitor(); // Call function
+
+    std::cout << "Calling demonstrateOptionalValueOr()\n";
     demonstrateOptionalValueOr(); // Call function
+
+    std::cout << "Calling demonstrateMakeUniqueAndMakeShared()\n";
     demonstrateMakeUniqueAndMakeShared(); // Call function
+
+    std::cout << "Calling demonstrateAlignedStorage()\n";
     demonstrateAlignedStorage(); // Call function
+
+    std::cout << "Calling demonstrateVariantLambda()\n";
     demonstrateVariantLambda(); // Call function
+
+    std::cout << "Calling demonstrateConditionVariableLambda()\n";
     demonstrateConditionVariableLambda(); // Call function
+
+    std::cout << "Calling demonstrateSharedPtrCustomDeleterLambda()\n";
     demonstrateSharedPtrCustomDeleterLambda(); // Call function
+
+    std::cout << "Calling demonstrateWeakPtrCustomDeleter()\n";
     demonstrateWeakPtrCustomDeleter(); // Call function
+
+    std::cout << "Calling demonstrateArrayCustomAllocator()\n";
     demonstrateArrayCustomAllocator(); // Call function
+
+    std::cout << "Calling demonstrateUniquePtrCustomDeleter()\n";
     demonstrateUniquePtrCustomDeleter(); // Call function
+
+    std::cout << "Calling demonstrateForEachLambda()\n";
     demonstrateForEachLambda(); // Call function
+
+    std::cout << "Calling demonstrateAccumulateLambda()\n";
     demonstrateAccumulateLambda(); // Call function
+
+    std::cout << "Calling demonstrateTransformLambda()\n";
     demonstrateTransformLambda(); // Call function
+
+    std::cout << "Calling demonstrateFindIfLambda()\n";
     demonstrateFindIfLambda(); // Call function
+
+    std::cout << "Calling demonstrateRemoveIfLambda()\n";
     demonstrateRemoveIfLambda(); // Call function
+
+    std::cout << "Calling demonstrateShuffleLambda()\n";
     demonstrateShuffleLambda(); // Call function
+
+    std::cout << "Calling demonstrateVariantLambdaVisitor()\n";
     demonstrateVariantLambdaVisitor(); // Call function
+
+    std::cout << "Calling demonstrateConditionVariableMutexLambda()\n";
     demonstrateConditionVariableMutexLambda(); // Call function
+
+    std::cout << "Calling demonstrateOptionalCustomType()\n";
     demonstrateOptionalCustomType(); // Call function
+
+    std::cout << "Calling demonstrateArraySizeDeduction()\n";
     demonstrateArraySizeDeduction(); // Call function
+
+    return 0; // Return statement
+}
+
+int main() {
+    std::cout << "Calling demonstrateSFINAE()\n";
+    demonstrateSFINAE(); // Call function
+
+    std::cout << "Calling demonstrateConcepts()\n";
+    demonstrateConcepts(); // Call function
+
+    std::cout << "Calling demonstrateTemplateSpecialization()\n";
+    demonstrateTemplateSpecialization(); // Call function
+
+    std::cout << "Calling demonstrateStaticVariable()\n";
+    demonstrateStaticVariable(); // Call function
+
+    std::cout << "Calling demonstrateDynamicMemory()\n";
+    demonstrateDynamicMemory(); // Call function
+
+    std::cout << "Calling demonstrateFunctionPointer()\n";
+    demonstrateFunctionPointer(); // Call function
+
+    std::cout << "Calling demonstrateArrayOfPointers()\n";
+    demonstrateArrayOfPointers(); // Call function
+
+    std::cout << "Calling demonstrateStructs()\n";
+    demonstrateStructs(); // Call function
+
+    std::cout << "Calling demonstrateUnion()\n";
+    demonstrateUnion(); // Call function
+
+    std::cout << "Calling demonstrateCopy()\n";
+    demonstrateCopy(); // Call function
+
+    std::cout << "Calling demonstrateForEach()\n";
+    demonstrateForEach(); // Call function
+
+    std::cout << "Calling demonstrateFind()\n";
+    demonstrateFind(); // Call function
+
+    std::cout << "Calling demonstrateSort()\n";
+    demonstrateSort(); // Call function
+
+    std::cout << "Calling demonstrateReverse()\n";
+    demonstrateReverse(); // Call function
+
+    std::cout << "Calling demonstrateAccumulate()\n";
+    demonstrateAccumulate(); // Call function
+
+    std::cout << "Calling demonstrateTransform()\n";
+    demonstrateTransform(); // Call function
+
+    std::cout << "Calling demonstrateFindIf()\n";
+    demonstrateFindIf(); // Call function
+
+    std::cout << "Calling demonstrateRemoveIf()\n";
+    demonstrateRemoveIf(); // Call function
+
+    std::cout << "Calling demonstrateShuffle()\n";
+    demonstrateShuffle(); // Call function
+
+    std::cout << "Calling demonstrateAccumulateCustom()\n";
+    demonstrateAccumulateCustom(); // Call function
+
+    std::cout << "Calling demonstrateMapLambda()\n";
+    demonstrateMapLambda(); // Call function
+
+    std::cout << "Calling demonstrateSetCustomComparator()\n";
+    demonstrateSetCustomComparator(); // Call function
+
+    std::cout << "Calling demonstrateConditionVariableMutex()\n";
+    demonstrateConditionVariableMutex(); // Call function
+
+    std::cout << "Calling demonstrateSharedPtrCustomDeleter()\n";
+    demonstrateSharedPtrCustomDeleter(); // Call function
+
+    std::cout << "Calling demonstrateWeakPtr()\n";
+    demonstrateWeakPtr(); // Call function
+
+    std::cout << "Calling demonstrateArray()\n";
+    demonstrateArray(); // Call function
+
+    std::cout << "Calling demonstrateForward(10)\n";
+    demonstrateForward(10); // Call function
+
+    std::cout << "Calling demonstrateMove()\n";
+    demonstrateMove(); // Call function
+
+    std::cout << "Calling demonstrateVectorCustomAllocator()\n";
+    demonstrateVectorCustomAllocator(); // Call function
+
+    std::cout << "Calling demonstrateMoveVector()\n";
+    demonstrateMoveVector(); // Call function
+
+    std::cout << "Calling demonstrateInitializerList()\n";
+    demonstrateInitializerList(); // Call function
+
+    std::cout << "Calling demonstrateVariantVisitor()\n";
+    demonstrateVariantVisitor(); // Call function
+
+    std::cout << "Calling demonstrateOptionalValueOr()\n";
+    demonstrateOptionalValueOr(); // Call function
+
+    std::cout << "Calling demonstrateMakeUniqueAndMakeShared()\n";
+    demonstrateMakeUniqueAndMakeShared(); // Call function
+
+    std::cout << "Calling demonstrateAlignedStorage()\n";
+    demonstrateAlignedStorage(); // Call function
+
+    std::cout << "Calling demonstrateVariantLambda()\n";
+    demonstrateVariantLambda(); // Call function
+
+    std::cout << "Calling demonstrateConditionVariableLambda()\n";
+    demonstrateConditionVariableLambda(); // Call function
+
+    std::cout << "Calling demonstrateSharedPtrCustomDeleterLambda()\n";
+    demonstrateSharedPtrCustomDeleterLambda(); // Call function
+
+    std::cout << "Calling demonstrateWeakPtrCustomDeleter()\n";
+    demonstrateWeakPtrCustomDeleter(); // Call function
+
+    std::cout << "Calling demonstrateArrayCustomAllocator()\n";
+    demonstrateArrayCustomAllocator(); // Call function
+
+    std::cout << "Calling demonstrateUniquePtrCustomDeleter()\n";
+    demonstrateUniquePtrCustomDeleter(); // Call function
+
+    std::cout << "Calling demonstrateForEachLambda()\n";
+    demonstrateForEachLambda(); // Call function
+
+    std::cout << "Calling demonstrateAccumulateLambda()\n";
+    demonstrateAccumulateLambda(); // Call function
+
+    std::cout << "Calling demonstrateTransformLambda()\n";
+    demonstrateTransformLambda(); // Call function
+
+    std::cout << "Calling demonstrateFindIfLambda()\n";
+    demonstrateFindIfLambda(); // Call function
+
+    std::cout << "Calling demonstrateRemoveIfLambda()\n";
+    demonstrateRemoveIfLambda(); // Call function
+
+    std::cout << "Calling demonstrateShuffleLambda()\n";
+    demonstrateShuffleLambda(); // Call function
+
+    std::cout << "Calling demonstrateVariantLambdaVisitor()\n";
+    demonstrateVariantLambdaVisitor(); // Call function
+
+    std::cout << "Calling demonstrateConditionVariableMutexLambda()\n";
+    demonstrateConditionVariableMutexLambda(); // Call function
+
+    std::cout << "Calling demonstrateOptionalCustomType()\n";
+    demonstrateOptionalCustomType(); // Call function
+
+    std::cout << "Calling demonstrateArraySizeDeduction()\n";
+    demonstrateArraySizeDeduction(); // Call function
+
     return 0; // Return statement
 }

@@ -5,56 +5,39 @@
 
 using namespace std;
 
-// Merged Solution class for validating parentheses
 class Solution {
 public:
     bool isValid(string s) {
-        stack<char> openParentheses;  // Stack to keep track of open parentheses
-        unordered_map<char, char> matchingParentheses = {
+        stack<char> stk;  // Stack to keep track of open parentheses
+        unordered_map<char, char> pairs = {
             {')', '('},
             {']', '['},
-            {'}', '{'},
+            {'}', '{'}
         };
-        
-        // Iterate through each character in the input string
-        for (const auto& currentChar : s) {
-            // Check if the current character is a closing parenthesis
-            if (matchingParentheses.find(currentChar) != matchingParentheses.end()) {
-                // If the stack is empty, there's no corresponding opening parenthesis
-                if (openParentheses.empty()) {
+
+        for (const auto& ch : s) {
+            if (pairs.find(ch) != pairs.end()) {  // If 'ch' is a closing bracket
+                if (stk.empty() || stk.top() != pairs[ch]) {  // Stack empty or no match
                     return false;
                 }
-
-                // Check if the top of the stack matches the expected opening parenthesis
-                if (openParentheses.top() != matchingParentheses[currentChar]) {
-                    return false;
-                }
-
-                // Pop the matched opening parenthesis from the stack
-                openParentheses.pop();
+                stk.pop();  // Matching pair found, pop from stack
             } else {
-                // If it's an opening parenthesis, push it onto the stack
-                openParentheses.push(currentChar);
+                stk.push(ch);  // Push open brackets onto the stack
             }
         }
-        
-        // Return true if no unmatched opening parentheses remain
-        return openParentheses.empty();
+
+        return stk.empty();  // True if all brackets matched
     }
+
     /*
-    Time Complexity: O(n), where n is the length of the input string s.
-    Space Complexity: O(n), for the stack in the worst case when all characters are opening parentheses.
+    Time Complexity: O(n), where n is the length of the input string s, since we process each character once.
+    Space Complexity: O(n), in the worst case, all characters are open parentheses and need to be stored in the stack.
     */
 };
 
-// Main function to test the solution
 int main() {
     Solution solution;
-
-    // Test case
     string s = "([{}])";
-
-    // Test the isValid method
     bool result = solution.isValid(s);
     cout << "Is the string valid? " << (result ? "Yes" : "No") << endl;
 

@@ -3,30 +3,30 @@ using namespace std;
 
 /**
  * Definition for singly-linked list.
- * struct ListNode {
+ * struct Node {
  *     int val;
- *     ListNode *next;
- *     ListNode() : val(0), next(nullptr) {}
- *     ListNode(int x) : val(x), next(nullptr) {}
- *     ListNode(int x, ListNode *next) : val(x), next(next) {}
+ *     Node *next;
+ *     Node() : val(0), next(nullptr) {}
+ *     Node(int x) : val(x), next(nullptr) {}
+ *     Node(int x, Node *next) : val(x), next(next) {}
  * };
  */
 
-struct ListNode {
+struct Node {
     int val;
-    ListNode* next;
-    ListNode() : val(0), next(nullptr) {}
-    ListNode(int x) : val(x), next(nullptr) {}
-    ListNode(int x, ListNode* next) : val(x), next(next) {}
+    Node* next;
+    Node() : val(0), next(nullptr) {}
+    Node(int x) : val(x), next(nullptr) {}
+    Node(int x, Node* next) : val(x), next(next) {}
 };
 
 /** Iterative Solution */
 class Solution {
 public:
     // Function to merge two sorted linked lists iteratively
-    ListNode* mergeTwoLists(ListNode* list1, ListNode* list2) {
-        ListNode dummy(0);  // Dummy node to act as the head of the merged list
-        ListNode* node = &dummy;  // Pointer to traverse and build the merged list
+    Node* mergeTwoLists(Node* list1, Node* list2) {
+        Node dummy(0);  // Dummy node to act as the head of the merged list
+        Node* node = &dummy;  // Pointer to traverse and build the merged list
 
         // Traverse both lists until one becomes empty
         while (list1 && list2) {
@@ -57,7 +57,7 @@ public:
 };
 
 // Helper function to print the list
-void printList(ListNode* head) {
+void printList(Node* head) {
     while (head != nullptr) {
         cout << head->val << " ";
         head = head->next;
@@ -66,13 +66,13 @@ void printList(ListNode* head) {
 }
 
 // Helper function to create a linked list from a vector of values
-ListNode* createList(const vector<int>& values) {
+Node* createList(const vector<int>& values) {
     if (values.empty()) return nullptr;
-    ListNode* head = new ListNode(values[0]);
-    ListNode* current = head;
+    Node* head = new Node(values[0]);
+    Node* current = head;
 
     for (int i = 1; i < values.size(); i++) {
-        current->next = new ListNode(values[i]);
+        current->next = new Node(values[i]);
         current = current->next;
     }
 
@@ -86,8 +86,8 @@ int main() {
     vector<int> list1_values = {1, 3, 5};
     vector<int> list2_values = {2, 4, 6};
 
-    ListNode* list1 = createList(list1_values);
-    ListNode* list2 = createList(list2_values);
+    Node* list1 = createList(list1_values);
+    Node* list2 = createList(list2_values);
 
     // Print original lists
     cout << "List 1: ";
@@ -97,7 +97,7 @@ int main() {
     printList(list2);
 
     // Merge the two lists
-    ListNode* mergedList = solution.mergeTwoLists(list1, list2);
+    Node* mergedList = solution.mergeTwoLists(list1, list2);
 
     // Print the merged list
     cout << "Merged List: ";

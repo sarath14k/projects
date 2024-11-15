@@ -19,7 +19,7 @@ int main() {
 
         switch (choice) {
             case 1: {
-                double amount;
+                double amount, price;
                 std::string instrument_name, order_type;
                 std::cout << "Enter amount: ";
                 std::cin >> amount;
@@ -27,7 +27,12 @@ int main() {
                 std::cin >> instrument_name;
                 std::cout << "Enter order type (e.g., market): ";
                 std::cin >> order_type;
-                std::string response = api.placeOrder(amount, instrument_name, order_type);
+                if(order_type != "market")
+                    price = 2000;
+                
+
+
+                std::string response = api.placeOrder(amount, instrument_name, order_type, price);
                 std::cout << "Order Response: " << response << std::endl;
                 break;
             }

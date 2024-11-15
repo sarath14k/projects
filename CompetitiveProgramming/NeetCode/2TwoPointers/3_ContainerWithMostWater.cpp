@@ -11,19 +11,19 @@ public:
         int left = 0;  // Left pointer
         int right = heights.size() - 1;  // Right pointer
         int maxArea = 0;  // Variable to store the maximum area
-        
+
         // While left pointer is less than right pointer
         while (left < right) {
             // Calculate area with the current left and right pointers
             int area = min(heights[left], heights[right]) * (right - left);
             maxArea = max(maxArea, area);  // Update max area if current area is larger
-            
+
             // Move the pointer pointing to the shorter line
-            if (heights[left] <= heights[right]) {
+            if (heights[left] <= heights[right])
                 left++;
-            } else {
+            else
                 right--;
-            }
+
         }
         return maxArea;  // Return the maximum area found
     }

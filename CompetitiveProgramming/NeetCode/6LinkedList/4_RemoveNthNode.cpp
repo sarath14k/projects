@@ -3,30 +3,30 @@ using namespace std;
 
 /**
  * Definition for singly-linked list.
- * struct ListNode {
+ * struct Node {
  *     int val;
- *     ListNode *next;
- *     ListNode() : val(0), next(nullptr) {}
- *     ListNode(int x) : val(x), next(nullptr) {}
- *     ListNode(int x, ListNode *next) : val(x), next(next) {}
+ *     Node *next;
+ *     Node() : val(0), next(nullptr) {}
+ *     Node(int x) : val(x), next(nullptr) {}
+ *     Node(int x, Node *next) : val(x), next(next) {}
  * };
  */
 
-struct ListNode {
+struct Node {
     int val;
-    ListNode* next;
-    ListNode() : val(0), next(nullptr) {}
-    ListNode(int x) : val(x), next(nullptr) {}
-    ListNode(int x, ListNode* next) : val(x), next(next) {}
+    Node* next;
+    Node() : val(0), next(nullptr) {}
+    Node(int x) : val(x), next(nullptr) {}
+    Node(int x, Node* next) : val(x), next(next) {}
 };
 
 class Solution {
 public:
-    ListNode* removeNthFromEnd(ListNode* head, int n) {
+    Node* removeNthFromEnd(Node* head, int n) {
         // Create a dummy node pointing to the head to handle edge cases
-        ListNode* dummy = new ListNode(0, head);
-        ListNode* left = dummy;
-        ListNode* right = head;
+        Node* dummy = new Node(0, head);
+        Node* left = dummy;
+        Node* right = head;
 
         // Move the right pointer n steps ahead
         while (n > 0) {
@@ -54,13 +54,13 @@ public:
 };
 
 // Helper function to create a linked list from a vector of values
-ListNode* createList(const vector<int>& values) {
+Node* createList(const vector<int>& values) {
     if (values.empty()) return nullptr;
-    ListNode* head = new ListNode(values[0]);
-    ListNode* current = head;
+    Node* head = new Node(values[0]);
+    Node* current = head;
 
     for (int i = 1; i < values.size(); i++) {
-        current->next = new ListNode(values[i]);
+        current->next = new Node(values[i]);
         current = current->next;
     }
 
@@ -68,7 +68,7 @@ ListNode* createList(const vector<int>& values) {
 }
 
 // Helper function to print the list
-void printList(ListNode* head) {
+void printList(Node* head) {
     while (head != nullptr) {
         cout << head->val << " ";
         head = head->next;
@@ -81,7 +81,7 @@ int main() {
 
     // Create a linked list from a vector of values
     vector<int> list_values = {1, 2, 3, 4, 5};
-    ListNode* head = createList(list_values);
+    Node* head = createList(list_values);
 
     // Print the original list
     cout << "Original List: ";

@@ -56,8 +56,8 @@ std::string DeribitAPI::authenticate() {
     return token;
 }
 
-std::string DeribitAPI::placeOrder(double amount, const std::string& instrument_name, const std::string& order_type) {
-    std::string url = BASE_URL + "private/buy?amount=" + std::to_string(amount) + "&instrument_name=" + instrument_name + "&type=" + order_type;
+std::string DeribitAPI::placeOrder(double amount, const std::string& instrument_name, const std::string& order_type, double price) {
+    std::string url = BASE_URL + "private/buy?amount=" + std::to_string(amount) + "&instrument_name=" + instrument_name + "&type=" + order_type + "&price=" + std::to_string(price);
     std::string response = performRequest(url, "", GET);
     return response;
 }
