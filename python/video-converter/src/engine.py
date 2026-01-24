@@ -2,7 +2,6 @@ import time
 
 from .config import CODECS
 
-
 def build_ffmpeg_command(
     file,
     out,
