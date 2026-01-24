@@ -1,10 +1,17 @@
 # Video Converter (GTK3)
 
-A lightweight, GPU-accelerated batch video compressor for Linux. Built with Python and GTK3, it provides a simple drag-and-drop interface for FFmpeg, optimizing videos for size while maintaining quality using modern codecs (HEVC/AV1).
+<div align="center">
+  <img src="video_converter.png" width="128" height="128">
+  <br>
+  <b>A lightweight, GPU-accelerated batch video compressor for Linux.</b>
+</div>
 
-![App Icon](video_converter.png)
+<br>
+
+Built with Python and GTK3, it provides a simple drag-and-drop interface for FFmpeg, optimizing videos for size while maintaining quality using modern codecs (HEVC/AV1).
 
 ## Features
+...
 
 * **GPU Acceleration**: Supports VAAPI for Intel and AMD, and NVENC/NVDEC for NVIDIA (via FFmpeg configuration).
 * **Batch Processing**: Queue multiple files and convert them sequentially.
