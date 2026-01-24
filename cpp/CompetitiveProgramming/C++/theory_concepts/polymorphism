@@ -1,0 +1,76 @@
+In C++, polymorphism allows objects of different classes to be treated as objects of a common base class. 
+It's a core concept of object-oriented programming (OOP) that provides flexibility and reusability in code.
+Polymorphism is primarily achieved through the use of virtual functions and inheritance.
+
+Types of Polymorphism
+Compile-Time Polymorphism (Static Binding):
+
+Achieved using function overloading and operator overloading.
+The decision about which function to call is made at compile time.
+
+Run-Time Polymorphism (Dynamic Binding):
+
+Achieved using inheritance and virtual functions.
+The decision about which function to call is made at runtime.
+Example of Run-Time Polymorphism
+Here’s a simple example to demonstrate run-time polymorphism using virtual functions:
+
+
+#include <iostream>
+using namespace std;
+
+class Base {
+public:
+    virtual void show() { // Virtual function
+        cout << "Base class show function called" << endl;
+    }
+    void print() {
+        cout << "Base class print function called" << endl;
+    }
+};
+
+class Derived : public Base {
+public:
+    void show() override { // Override virtual function
+        cout << "Derived class show function called" << endl;
+    }
+    void print() {
+        cout << "Derived class print function called" << endl;
+    }
+};
+
+int main() {
+    Base* basePtr;
+    Derived derivedObj;
+    
+    basePtr = &derivedObj;
+
+    
+    basePtr->show();  // Calls Derived class show function (dynamic binding)
+    basePtr->print(); // Calls Base class print function (static binding)
+    
+    return 0;
+}
+Explanation:
+Virtual Function:
+
+The show function in the Base class is declared as virtual. This allows the function to be overridden in the 
+derived class.
+
+Override:
+The show function is overridden in the Derived class using the override keyword, which is optional but helps 
+to avoid errors.
+
+Pointer to Base Class:
+A pointer to the base class basePtr is assigned the address of an object of the derived class derivedObj.
+
+Dynamic Binding:
+When basePtr->show() is called, the show function in the Derived class is executed. This is because the show 
+function is virtual and the call is resolved at runtime.
+
+Static Binding:
+When basePtr->print() is called, the print function in the Base class is executed. This is because print is 
+not a virtual function, and the call is resolved at compile time.
+
+Polymorphism is a powerful feature that allows for designing flexible and maintainable code, 
+enabling the same interface to be used for different underlying data types.

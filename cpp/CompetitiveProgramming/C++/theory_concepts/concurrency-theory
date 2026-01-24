@@ -1,0 +1,48 @@
+1. Processes and Threads
+Processes: Independent programs that run in their own memory space. Communication between processes requires inter-process communication (IPC) mechanisms like pipes, message queues, or shared memory.
+
+Threads: Smaller units of execution within a process that share the same memory space. Threads can communicate more easily but require synchronization to avoid conflicts.
+
+2. Multithreading
+Multithreading: Running multiple threads within a single process. It allows concurrent execution of tasks within the same application, leading to better resource utilization and responsiveness.
+
+3. Synchronization
+
+Mutex (Mutual Exclusion): A lock that ensures only one thread can access a resource at a time. It prevents race conditions where the outcome depends on the order of thread execution.
+
+Semaphore: A signaling mechanism that controls access to a resource pool. It can allow multiple threads to access a limited number of resources concurrently.
+
+Condition Variables: Used to block a thread until a particular condition is met. It is often used with mutexes to manage complex thread interactions.
+
+4. Deadlock, Livelock, and Starvation
+Deadlock: A situation where two or more threads are blocked forever, waiting for each other to release resources.
+
+Livelock: Similar to deadlock, but the threads are not blocked. Instead, they keep changing states in response to each other without making any progress.
+
+Starvation: A situation where a thread is perpetually denied necessary resources to proceed because other threads are constantly given preference.
+
+5. Concurrency Models
+Thread-Based Model: Utilizes multiple threads within a process. Threads share the same memory space and can communicate easily but need careful synchronization.
+Event-Driven Model: Uses an event loop to handle tasks. It is efficient for I/O-bound applications but can be complex to manage for CPU-bound tasks.
+Actor Model: Treats "actors" as the fundamental units of computation. Actors communicate via message passing and do not share state, reducing the need for synchronization.
+
+6. Lock-Free and Wait-Free Algorithms
+Lock-Free: Guarantees that at least one thread makes progress in a finite number of steps. It reduces contention and improves performance in highly concurrent systems.
+Wait-Free: Guarantees that every thread completes its operation in a finite number of steps. It is the most robust but often the most complex to implement.
+
+7. Atomic Operations
+Atomic Operations: Operations that are performed as a single, indivisible step. They are crucial in concurrent programming to avoid race conditions. Examples include atomic increment and atomic compare-and-swap.
+
+8. Memory Models and Visibility
+Memory Model: Defines how operations on memory are executed and made visible to other threads. Different architectures and programming languages have different memory models.
+Visibility: Ensures that changes made by one thread are visible to other threads. This requires proper use of synchronization primitives like mutexes or memory barriers.
+
+9. Parallelism
+Data Parallelism: Distributes data across multiple processors or threads to perform the same operation concurrently.
+Task Parallelism: Distributes different tasks across multiple processors or threads to execute concurrently.
+
+10. Concurrency Libraries and Frameworks
+POSIX Threads (Pthreads): A standard for thread creation and synchronization in C/C++.
+C++11 Concurrency: Introduced standard support for multithreading in C++ with features like std::thread, std::mutex, and std::async.
+OpenMP: A framework for parallel programming in C, C++, and Fortran, providing compiler directives to specify parallel regions.
+Intel Threading Building Blocks (TBB): A C++ library for task-based parallelism

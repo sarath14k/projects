@@ -1,0 +1,154 @@
+
+Multiprocessing in C++ involves creating and managing multiple processes to perform tasks concurrently. 
+Unlike multithreading, where multiple threads run within a single process and share the same memory space, 
+multiprocessing involves separate processes, each with its own memory space. This can be advantageous for 
+tasks that require high isolation or involve heavy computations.
+
+1. POSIX fork and exec
+On Unix-like systems, the fork and exec system calls are commonly used for creating and managing processes.
+
+fork: Creates a new process by duplicating the calling process. The new process is called the child process.
+exec: Replaces the current process image with a new process image.
+Example using fork and exec:
+
+
+#include <iostream>
+#include <unistd.h>
+#include <sys/wait.h>
+
+void executeChildProcess() {
+    // This is the child process
+    execlp("/bin/ls", "ls", nullptr); // Replace process image with "ls"
+}
+
+int main() {
+    pid_t pid = fork(); // Create a new process
+
+    if (pid == 0) {
+        // Child process
+        executeChildProcess();
+    } else if (pid > 0) {
+        // Parent process
+        wait(nullptr); // Wait for the child process to complete
+        std::cout << "Child process completed\n";
+    } else {
+        // Fork failed
+        std::cerr << "Fork failed\n";
+        return 1;
+    }
+
+    return 0;
+}
+
+2. Process Management in Windows
+On Windows, the CreateProcess function is used to create new processes.
+
+Example using CreateProcess:
+
+#include <iostream>
+#include <windows.h>
+
+void executeChildProcess() {
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+
+    // Create child process
+    if (!CreateProcess(nullptr, "C:\\Windows\\System32\\notepad.exe", nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+        std::cerr << "CreateProcess failed (" << GetLastError() << ")\n";
+        return;
+    }
+
+    // Wait for the child process to complete
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    // Close process and thread handles
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+}
+
+int main() {
+    executeChildProcess();
+    std::cout << "Child process completed\n";
+    return 0;
+}
+3. Multiprocessing with Boost.Process
+The Boost.Process library provides a higher-level API for process creation and management that works across different operating systems.
+
+Example using Boost.Process:
+
+#include <boost/process.hpp>
+#include <iostream>
+
+namespace bp = boost::process;
+
+void executeChildProcess() {
+    bp::child c("ls");
+    c.wait(); // Wait for the child process to complete
+}
+
+int main() {
+    executeChildProcess();
+    std::cout << "Child process completed\n";
+    return 0;
+}
+
+
+4. Inter-Process Communication (IPC)
+Inter-process communication is essential for processes to exchange data. Common IPC mechanisms include pipes, message queues, shared memory, and sockets.
+
+Example using Pipes (POSIX):
+
+#include <iostream>
+#include <unistd.h>
+#include <sys/wait.h>
+
+void childProcess(int pipefd[2]) {
+    close(pipefd[0]); // Close unused read end
+    const char* msg = "Hello from child process\n";
+    write(pipefd[1], msg, strlen(msg));
+    close(pipefd[1]); // Close write end
+}
+
+void parentProcess(int pipefd[2]) {
+    close(pipefd[1]); // Close unused write end
+    char buffer[128];
+    read(pipefd[0], buffer, sizeof(buffer));
+    std::cout << "Parent received: " << buffer;
+    close(pipefd[0]); // Close read end
+}
+
+int main() {
+    int pipefd[2];
+    if (pipe(pipefd) == -1) {
+        std::cerr << "Pipe failed\n";
+        return 1;
+    }
+
+    pid_t pid = fork();
+    if (pid == 0) {
+        // Child process
+        childProcess(pipefd);
+    } else if (pid > 0) {
+        // Parent process
+        wait(nullptr); // Wait for the child process to complete
+        parentProcess(pipefd);
+    } else {
+        // Fork failed
+        std::cerr << "Fork failed\n";
+        return 1;
+    }
+
+    return 0;
+}
+
+5. Best Practices for Multiprocessing in C++
+- Use appropriate IPC mechanisms: Choose the right IPC mechanism based on the requirements of your application.
+- Manage resources carefully: Ensure that file descriptors, handles, and other resources are properly closed to 
+avoid leaks.
+- Handle errors gracefully: Check the return values of system calls and handle errors appropriately.
+- Synchronize processes if needed: Use synchronization mechanisms like semaphores or mutexes if processes need 
+to coordinate their actions.
+- By understanding and implementing these techniques, you can effectively use multiprocessing in C++ to build robust and efficient applications

@@ -1,0 +1,152 @@
+1.System Calls
+==============
+a system call is a way for programs to interact with the kernel, the core part of the operating system. 
+System calls provide an interface between user-space applications (programs running on the system) 
+and the operating system kernel, which manages hardware resources like memory, CPU, and 
+input/output devices.
+         
+         interact -interface
+program <===================> kernel
+
+When a program needs to perform actions that require access to hardware or protected resources (like reading from disk, writing to a file, allocating memory, or sending data over a network), it cannot do so directly. Instead, it requests the kernel to perform these operations on its behalf via system calls. This provides security, stability, and abstraction, ensuring that user programs cannot directly manipulate critical system resources.
+
+File management: open(), read(), write(), close(), etc.
+Process control: fork(), exec(), wait(), exit(), etc.
+Memory management: mmap(), brk(), etc.
+Device management: ioctl(), read(), write(), etc.
+Networking: socket(), bind(), connect(), etc.
+
+Common System Calls:
+
+fork(): Creates a new process.
+execve(): Replaces the current process image with a new one.
+read(): Reads data from a file or input stream.
+write(): Writes data to a file or output stream.
+open(): Opens a file.
+close(): Closes a file descriptor.
+mmap(): Maps files or devices into memory.
+exit(): Terminates a process.
+
+
+2.Process Control
+================
+ process control refers to managing processes within the operating system. Processes are instances of running programs, and process control operations allow you to create, manipulate, and terminate these processes. The Linux kernel provides several system calls for managing processes,
+
+3.Signals and Signal Handling
+=============================
+ signals are a form of inter-process communication (IPC) used to notify a process that a specific event has occurred. A signal is a limited, asynchronous form of communication between processes, where the operating system sends a signal to a process, interrupting its execution to handle the signal or take some default action.
+
+Signals are commonly used to:
+
+Terminate a process (e.g., when a user presses Ctrl+C).
+Pause or resume a process.
+Handle exceptional conditions (e.g., division by zero).
+Notify a process that a child has terminated.
+
+1	SIGHUP	 Hangup (terminal disconnected)	Terminate
+2	SIGINT	 Interrupt from keyboard (Ctrl+C)	Terminate
+3	SIGQUIT	 Quit from keyboard (Ctrl+)	Terminate with core dump
+9	SIGKILL	 Kill signal (cannot be caught)	Terminate (forcefully)
+11	SIGSEGV	 Segmentation fault	Terminate with core dump
+15	SIGTERM	 Termination signal (graceful stop)	Terminate
+
+4.Socket
+========
+
+Sockets are the fundamental building blocks for networking and inter-process communication (IPC) in Linux. They allow processes (both on the same machine and across different machines) to communicate over a network, using different communication protocols such as TCP/IP, UDP, etc.
+
+Sockets in Linux are abstracted through the Berkeley Sockets API. This API provides a set of system calls that enable communication over the network.
+
+Key Concepts
+
+Socket: A combination of an IP address and a port number. It represents one endpoint of a two-way communication link between two programs.
+
+Port: A numerical identifier (16-bit number) used to specify the specific service or application on a host. For example, port 80 is used for HTTP.
+
+Protocol: The communication rules used by the socket. The two main protocols are:
+TCP (Transmission Control Protocol): Provides a reliable, connection-oriented communication stream.
+UDP (User Datagram Protocol): Provides a connectionless communication, where data (datagrams) are sent without ensuring delivery.
+
+Types of Sockets in Linux
+    Stream Sockets (SOCK_STREAM):
+
+    Use TCP for reliable, two-way, connection-based communication.
+    Data is guaranteed to arrive in the correct order without duplication.
+
+    Datagram Sockets (SOCK_DGRAM):
+
+    Use UDP for connectionless communication.
+    No guarantees on the order of packets or that packets will arrive.
+    More lightweight and faster, suitable for real-time applications like DNS or video streaming.
+
+    Raw Sockets (SOCK_RAW):
+
+    Used to send or receive raw packets at the network layer (useful for network diagnostics and creating custom protocols).
+    Typically requires superuser (root) privileges.
+
+Socket System Calls
+-------------------
+1. Creating a Socket: socket()
+    int socket(int domain, int type, int protocol);
+Creates a new socket and returns a file descriptor (a small integer) that can be used to
+refer to the socket.
+
+2. Binding a Socket: bind()
+    int bind(int sockfd, struct sockaddr *my_addr, socklen_t addrlen);
+Associates a socket with a local address and port number.
+
+3. Listening for Connections: listen()
+    int listen(int sockfd, int backlog);
+The listen() function is used with stream (TCP) sockets to listen for incoming connection requests.
+
+4. Accepting a Connection: accept()
+    int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+The accept() function is used by the server to accept an incoming connection from a client.
+
+5. Connecting to a Server: connect()
+    int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+The connect() function is used by the client to establish a connection with a server.
+
+6. Sending and Receiving Data: send(), recv(), sendto(), recvfrom()
+    ssize_t send(int sockfd, const void *buf, size_t len, int flags);
+    ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+Used for sending and receiving data over a connected stream (TCP) socket.
+
+5.Error Handling
+================
+In Linux, error handling plays a crucial role in system programming, especially when working with system calls like those in file I/O, process control, and networking. When a system call fails, it usually returns a special value indicating an error (e.g., -1 for integer-returning functions). After the failure, an internal global variable called errno is set by the system to provide more detailed information about the nature of the error.
+
+Return Values and Errors: Most system calls return -1 to indicate failure and a non-negative value on success.
+
+Return -1: An error occurred.
+Return non-negative: Successful operation
+
+6.Dynamic Linking and Libraries
+===============================
+Dynamic Linking in Linux refers to the process of linking libraries to an executable during runtime rather than at compile time. This provides flexibility, as the same shared library can be used by multiple programs simultaneously without needing each program to have its own copy of the library. Libraries are collections of precompiled functions that can be linked to a program either statically or dynamically.
+
+Types of Libraries
+Static Libraries (.a files):
+
+Contain compiled code that gets copied into the program’s executable during the linking phase.
+Increases the size of the executable since the entire library code is included in the final executable.
+The library code becomes part of the executable and does not require any external dependencies at runtime.
+Example extension: libexample.a.
+
+
+Shared (Dynamic) Libraries (.so files):
+
+Also known as shared objects, these are linked at runtime.
+Multiple programs can use the same library simultaneously, reducing memory usage and disk space.
+If a library is updated, all applications using that library benefit from the update without needing to be recompiled.
+Example extension: libexample.so.
+
+7. Linux ,compilation process
+=============================
+The Linux compilation process transforms source code written in high-level languages like C or C++ into executable machine code that the system can run. The process typically involves multiple steps, including preprocessing, compiling, assembling, and linking. Each step produces intermediary files and plays a key role in converting human-readable source code into binary instructions understood by the processor.
+
+Key Phases of the Compilation Process
+Preprocessing
+Compilation
+Assembly
+Linking

@@ -1,0 +1,186 @@
+Singleton design pattern
+------------------------
+### Overview
+
+use cases:
+    whenever you want only one instance of class to be created.
+    basically any situation where multiple instances of  class is lead into some issue or conflict you can use singleton design patterns
+
+    for eg:
+        for logging you want all the logs to go to one location to avoid conflicts , you can use singleton dp
+
+        all the components of an application using same configuration setting,hence you can store the configuration settings in a singleton 
+        class
+
+        to use a single dp connection to reduce memory usage and improve performance
+
+
+Design patterns are proven solutions to recurring problems in software design. In C++, design patterns provide a structured approach
+ to organizing code for improved flexibility, scalability, and maintenance. 
+ Here are a few common design patterns and their real-world use cases:
+
+-----------------------------------------------------------------
+1. Creational Design Patterns
+These patterns deal with object creation mechanisms.
+
+a. Singleton Pattern
+Ensures a class has only one instance and provides a global point of access to it.
+
+Real-world Use Case: Managing database connections. You only need one instance of the database connection manager to avoid resource conflicts
+and ensure consistent state.
+
+class Database {
+public:
+    static Database& getInstance() {
+        static Database instance;
+        return instance;
+    }
+private:
+    Database() {}  // Private constructor
+};
+
+b. Factory Pattern
+Creates objects without exposing the instantiation logic to the client and refers to the newly created object using a common interface.
+
+Real-world Use Case: A shape drawing application that can create different shapes (circle, rectangle) without specifying their concrete
+ class in the code that uses them.
+
+class Shape {
+public:
+    virtual void draw() = 0;
+};
+
+class Circle : public Shape {
+public:
+    void draw() override {
+        // draw circle
+    }
+};
+
+class ShapeFactory {
+public:
+    static Shape* createShape(std::string type) {
+        if (type == "circle") return new Circle();
+        // Other shapes...
+        return nullptr;
+    }
+};
+
+2. Structural Design Patterns
+These patterns deal with object composition or class relationships.
+
+a. Adapter Pattern
+Allows incompatible classes to work together by converting the interface of a class into another interface that clients expect.
+
+Real-world Use Case: Integrating a new payment gateway into an existing e-commerce application. The new gateway may have a different API, and an adapter allows it to work with your current system.
+
+class OldPaymentSystem {
+public:
+    void pay(int amount) {
+        // old payment process
+    }
+};
+
+class NewPaymentSystem {
+public:
+    void processPayment(double amount) {
+        // new payment process
+    }
+};
+
+class PaymentAdapter : public OldPaymentSystem {
+private:
+    NewPaymentSystem* newSystem;
+public:
+    PaymentAdapter(NewPaymentSystem* newSys) : newSystem(newSys) {}
+    void pay(int amount) override {
+        newSystem->processPayment(static_cast<double>(amount));
+    }
+};
+
+
+b. Facade Pattern
+Provides a simplified interface to a complex subsystem.
+
+Real-world Use Case: A library management system where the facade offers a simple interface for checking out books, handling notifications, and updating the library catalog, even though the underlying subsystems are more complicated.
+
+class LibraryFacade {
+public:
+    void checkoutBook(int bookID) {
+        // Call underlying subsystems (inventory, member management, etc.)
+    }
+};
+
+
+3. Behavioral Design Patterns
+These patterns focus on communication between objects.
+
+a. Observer Pattern
+Defines a dependency between objects so that when one object changes state, all its dependents are notified and updated automatically.
+
+Real-world Use Case: A stock price monitoring system where multiple users are notified whenever stock prices change.
+
+class Observer {
+public:
+    virtual void update(float price) = 0;
+};
+
+class Stock : public Observer {
+    void update(float price) override {
+        // Update stock price
+    }
+};
+
+class StockMarket {
+private:
+    std::vector<Observer*> observers;
+public:
+    void addObserver(Observer* obs) {
+        observers.push_back(obs);
+    }
+
+    void notifyObservers(float price) {
+        for (auto obs : observers) {
+            obs->update(price);
+        }
+    }
+};
+
+
+b. Strategy Pattern
+Defines a family of algorithms, encapsulates each one, and makes them interchangeable. Strategy lets the algorithm vary independently from the clients that use it.
+
+Real-world Use Case: A navigation system that switches between different routing algorithms (e.g., fastest, shortest) without changing the system’s core logic.
+
+class RouteStrategy {
+public:
+    virtual void buildRoute() = 0;
+};
+
+class ShortestRoute : public RouteStrategy {
+    void buildRoute() override {
+        // shortest route algorithm
+    }
+};
+
+class Navigator {
+private:
+    RouteStrategy* strategy;
+public:
+    void setStrategy(RouteStrategy* strat) {
+        strategy = strat;
+    }
+
+    void calculateRoute() {
+        strategy->buildRoute();
+    }
+};
+
+
+
+Conclusion
+Design patterns in C++ help simplify the design process, making code more flexible, reusable, and easier to maintain. 
+By implementing these patterns, C++ developers can solve common software design problems efficiently.
+
+
+

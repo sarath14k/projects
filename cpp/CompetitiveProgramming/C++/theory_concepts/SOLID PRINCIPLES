@@ -1,0 +1,213 @@
+The SOLID principles are a set of five design principles in object-oriented programming (OOP)
+that help developers create more understandable, flexible, and maintainable software. 
+These principles were introduced by Robert C. Martin (Uncle Bob) and form the foundation for 
+building well-structured, scalable software systems.
+
+Here's a breakdown of the SOLID principles:
+
+1. S - Single Responsibility Principle (SRP)
+============================================
+Definition: A class should have one, and only one, reason to change, meaning it should only have one 
+responsibility or job.
+
+Explanation:
+
+Every class should focus on a single task or functionality.
+By following SRP, you make your class easier to understand, modify, and test.
+If a class has multiple responsibilities, it can become difficult to maintain because a change in one 
+responsibility may affect the others.
+Example:
+
+
+class ReportGenerator {
+public:
+    void generateReport() {
+        // Generates report logic
+    }
+};
+
+class ReportPrinter {
+public:
+    void printReport() {
+        // Prints report logic
+    }
+};
+
+ReportGenerator is responsible only for generating reports, and ReportPrinter handles the printing. 
+Each class has a single responsibility.
+
+
+2. O - Open/Closed Principle (OCP)
+==================================
+Definition: Software entities (classes, modules, functions) should be open for extension, but closed 
+for modification.
+
+Explanation:
+
+This means you should be able to add new functionality to a class without modifying its existing code.
+The idea is to allow your system to grow by adding new features (extensions) rather than altering the 
+existing code, which reduces the risk of introducing bugs.
+Example:
+
+
+class Shape {
+public:
+    virtual double area() const = 0;  // Abstract class, can be extended
+};
+
+class Circle : public Shape {
+    double radius;
+public:
+    Circle(double r) : radius(r) {}
+    double area() const override {
+        return 3.14 * radius * radius;
+    }
+};
+
+class Rectangle : public Shape {
+    double width, height;
+public:
+    Rectangle(double w, double h) : width(w), height(h) {}
+    double area() const override {
+        return width * height;
+    }
+};
+
+
+The Shape class is open for extension (new shapes like Circle, Rectangle), but the existing Shape 
+class doesn’t need modification when a new shape is added.
+
+
+
+3. L - Liskov Substitution Principle (LSP)
+==========================================
+Definition: Subtypes must be substitutable for their base types without altering the correctness of the 
+program.
+
+Explanation:
+
+This principle ensures that objects of a derived class must be able to replace objects of the base 
+class without affecting the correctness of the program.
+It promotes polymorphism and guarantees that derived classes enhance, but do not break, the functionality 
+of the base class.
+Example:
+
+
+class Bird {
+public:
+    virtual void fly() {
+        // General flying logic
+    }
+};
+
+class Sparrow : public Bird {
+public:
+    void fly() override {
+        // Sparrow-specific flying
+    }
+};
+
+void makeBirdFly(Bird& bird) {
+    bird.fly();  // Works correctly with any bird type
+}
+
+
+The Sparrow class can replace Bird anywhere without breaking the program, adhering to LSP.
+
+
+4. I - Interface Segregation Principle (ISP)
+===========================================
+Definition: Clients should not be forced to depend on interfaces they do not use.
+
+Explanation:
+
+A class should not implement methods that it doesn't need or use. Instead, it should implement smaller, 
+more specific interfaces.
+This principle encourages creating focused interfaces with a single responsibility instead of large, 
+monolithic ones.
+Example:
+
+
+class IPrinter {
+public:
+    virtual void print() = 0;
+};
+
+class IScanner {
+public:
+    virtual void scan() = 0;
+};
+
+class MultiFunctionPrinter : public IPrinter, public IScanner {
+public:
+    void print() override {
+        // Printing logic
+    }
+    void scan() override {
+        // Scanning logic
+    }
+};
+
+class SimplePrinter : public IPrinter {
+public:
+    void print() override {
+        // Printing logic
+    }
+};
+
+By separating IPrinter and IScanner, you avoid forcing a simple printer to implement the scan() method, 
+adhering to ISP.
+
+5. D - Dependency Inversion Principle (DIP)
+==========================================
+Definition: High-level modules should not depend on low-level modules. Both should depend on abstractions.
+Abstractions should not depend on details; details should depend on abstractions.
+
+Explanation:
+
+This principle encourages the use of interfaces or abstract classes to decouple high-level and low-level 
+modules, making the code more flexible and easier to modify.
+Dependency Inversion shifts the responsibility of creating dependencies from the high-level class to 
+external sources, often achieved using techniques like Dependency Injection.
+Example:
+
+
+class IMessageSender {
+public:
+    virtual void sendMessage(const std::string& message) = 0;
+};
+
+class EmailSender : public IMessageSender {
+public:
+    void sendMessage(const std::string& message) override {
+        // Send email logic
+    }
+};
+
+class Notification {
+    IMessageSender& sender;
+public:
+    Notification(IMessageSender& s) : sender(s) {}
+    void notify(const std::string& message) {
+        sender.sendMessage(message);  // High-level class depends on abstraction, not concrete implementation
+    }
+};
+
+int main() {
+    EmailSender emailSender;
+    Notification notification(emailSender);
+    notification.notify("Hello, SOLID principles!");
+}
+
+
+
+Here, Notification depends on the abstraction IMessageSender, 
+allowing the flexibility to swap EmailSender with another message-sending mechanism (like SMSSender).4
+
+Summary of SOLID:
+Single Responsibility: Each class should have one responsibility.
+Open/Closed: Classes should be extendable without being modified.
+Liskov Substitution: Subtypes should replace their base types without breaking functionality.
+Interface Segregation: Use small, specific interfaces rather than large general-purpose ones.
+Dependency Inversion: High-level modules should depend on abstractions, not on concrete details.
+Applying these principles leads to software that is easier to maintain, extend, and understand. They also promote reusable, modular, and testabl
