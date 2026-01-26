@@ -79,10 +79,14 @@ class FileRow:
         top_line = Gtk.Box(spacing=6)
         content_box.pack_start(top_line, False, False, 0)
 
-        # Filename
+        # Filename - 2 lines max with middle ellipsis
         fname = os.path.basename(path_str)
         self.label = Gtk.Label(label=fname, xalign=0)
         self.label.set_ellipsize(Pango.EllipsizeMode.MIDDLE)
+        self.label.set_lines(2)
+        self.label.set_line_wrap(True)
+        self.label.set_line_wrap_mode(Pango.WrapMode.CHAR)
+        self.label.set_max_width_chars(30)
         self.label.get_style_context().add_class("font-bold")
         top_line.pack_start(self.label, True, True, 0)
 

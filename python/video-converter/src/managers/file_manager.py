@@ -164,14 +164,15 @@ class FileManager:
         Gtk.drag_finish(context, True, False, time)
 
     def get_file_list(self):
-        # Return file rows in the order they appear in the Gtk.ListBox
+        """Return file rows in the visual order they appear in the Gtk.ListBox."""
         ordered_files = []
         for row_container in self.window.file_list_box.get_children():
-            # The FileRow.root (frame) is the child of the ListBoxRow
-            frame = row_container.get_child()
-            # We need to find which FileRow object matches this frame
+            # row_container is the Gtk.ListBoxRow wrapper
+            # get_child() returns the FileRow.root (EventBox) that was added
+            child_widget = row_container.get_child()
+            # Find the FileRow that owns this widget
             for f_row in self.files.values():
-                if f_row.root == frame:
+                if f_row.root is child_widget:
                     ordered_files.append(f_row)
                     break
         return ordered_files

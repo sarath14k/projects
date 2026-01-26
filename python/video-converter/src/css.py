@@ -64,8 +64,8 @@ STANDARD_CSS = """
     }
 
     .drag-active {
-        border: 2px dashed @accent_color;
-        background-color: alpha(@accent_color, 0.1);
+        border: none;
+        background-color: alpha(@accent_color, 0.05);
         border-radius: 16px;
     }
 
@@ -244,5 +244,19 @@ PITCH_BLACK_CSS = """
     }
     progressbar trough {
         background-color: #222222;
+    }
+
+    .drag-active {
+        border: none;
+        background-color: alpha(#2ec27e, 0.08);
+    }
+    .drag-active box,
+    .drag-active image,
+    .drag-active label,
+    .drag-active * {
+        background-color: transparent;
+        background-image: none;
+        border: none;
+        box-shadow: none;
     }
 """
