@@ -41,10 +41,11 @@ class FileRow:
         self.root = eb
 
         frame = Gtk.Frame()
+        frame.set_shadow_type(Gtk.ShadowType.NONE)
         eb.add(frame)
 
-        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        hbox.set_border_width(8)
+        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        hbox.set_border_width(0)
         frame.add(hbox)
 
         # Setup full-row drag source
@@ -68,7 +69,7 @@ class FileRow:
         self.thumb.set_pixel_size(48)
         self.thumb.set_opacity(0.3)
         self.thumb.get_style_context().add_class("thumbnail")
-        self.thumb.set_size_request(96, 54)
+        self.thumb.set_size_request(110, 62)
         hbox.pack_start(self.thumb, False, False, 0)
 
         # Content box (filename, info, progress)
@@ -83,7 +84,8 @@ class FileRow:
         fname = os.path.basename(path_str)
         self.label = Gtk.Label(label=fname, xalign=0)
         self.label.set_ellipsize(Pango.EllipsizeMode.MIDDLE)
-        self.label.get_style_context().add_class("font-bold")
+        self.label.set_width_chars(1) # Allow shrinking to min
+        self.label.get_style_context().add_class("filename-label")
         top_line.pack_start(self.label, True, True, 0)
 
         # Conflict Warning
@@ -95,6 +97,8 @@ class FileRow:
         # Info label
         self.info = Gtk.Label(label="Pending...", xalign=0)
         self.info.set_use_markup(True)
+        self.info.set_ellipsize(Pango.EllipsizeMode.END)
+        self.info.set_width_chars(1) # Allow shrinking to min
         self.info.get_style_context().add_class("dim-label")
         content_box.pack_start(self.info, False, False, 0)
 
@@ -103,8 +107,8 @@ class FileRow:
         self.progress.set_hexpand(True)
         content_box.pack_start(self.progress, False, False, 0)
 
-        # Action buttons on the right (vertically stacked)
-        action_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        # Action buttons on the right (horizontally stacked)
+        action_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         action_box.set_valign(Gtk.Align.CENTER)
 
         # Play button
@@ -203,8 +207,8 @@ class FileRow:
 
     def _set_thumb(self, path):
         try:
-            # Match the set_size_request(96, 54)
-            pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 96, 54, True)
+            # Match the set_size_request(110, 62)
+            pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 110, 62, True)
             self.thumb.set_from_pixbuf(pix)
             self.thumb.set_opacity(1.0)
         except:

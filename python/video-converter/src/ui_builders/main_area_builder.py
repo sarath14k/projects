@@ -17,7 +17,7 @@ def build_main_area(window):
 
     # Top controls
     top_controls = Gtk.Box(spacing=16)
-    top_controls.set_border_width(20)
+    top_controls.set_border_width(24)
     top_controls.set_margin_bottom(0)
     right_box.pack_start(top_controls, False, False, 0)
 
@@ -65,7 +65,7 @@ def build_main_area(window):
     right_box.pack_start(window.stack, True, True, 0)
 
     # Empty state
-    window.empty_state = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+    window.empty_state = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
     window.empty_state.set_valign(Gtk.Align.CENTER)
     window.empty_state.set_halign(Gtk.Align.CENTER)
     icon = Gtk.Image.new_from_icon_name(
@@ -76,7 +76,7 @@ def build_main_area(window):
     icon.get_style_context().add_class("empty-icon")
     lbl = Gtk.Label()
     lbl.set_markup(
-        "<span size='xx-large' weight='bold' foreground='#555555'>Drop Videos Here</span>"
+        "<span size='32000' weight='800' alpha='40%'>Drop Videos Here</span>"
     )
     window.empty_state.pack_start(icon, False, False, 0)
     window.empty_state.pack_start(lbl, False, False, 0)

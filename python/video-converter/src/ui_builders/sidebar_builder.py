@@ -22,7 +22,7 @@ def build_sidebar(window):
     main_hbox.pack_start(window.sidebar_revealer, False, False, 0)
 
     sidebar_frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-    sidebar_frame.set_size_request(240, -1)
+    sidebar_frame.set_size_request(200, -1)
     sidebar_frame.get_style_context().add_class("sidebar-bg")
     window.sidebar_revealer.add(sidebar_frame)
 

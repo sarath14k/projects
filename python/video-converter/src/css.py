@@ -27,20 +27,21 @@ STANDARD_CSS = """
     .sidebar-bg {
         background-color: alpha(#000000, 0.1);
         border-right: 1px solid alpha(#ffffff, 0.05);
+        font-size: 13px;
     }
 
     .row-card {
         border-radius: 16px;
         border: 1px solid alpha(#ffffff, 0.05);
         background-color: @card_bg;
-        padding: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        padding: 16px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .row-card:hover {
-        background-color: shade(@card_bg, 1.05);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-        transition: all 0.2s ease;
+        background-color: shade(@card_bg, 1.08);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.35);
     }
 
     .file-list { background: transparent; }
@@ -59,8 +60,16 @@ STANDARD_CSS = """
     }
 
     .thumbnail {
-        border-radius: 8px;
+        border-radius: 12px;
         background-color: #000000;
+        border: 1px solid alpha(#ffffff, 0.1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .filename-label {
+        font-weight: 800;
+        font-size: 14px;
+        color: @fg_color;
     }
 
     .empty-icon {
@@ -188,18 +197,28 @@ PITCH_BLACK_CSS = """
     .sidebar-bg {
         background-color: @bg_color;
         border-right: none;
+        font-size: 13px;
     }
 
     .row-card {
         background-color: @card_bg;
-        border: none;
+        border: 1px solid #111111;
+        padding: 16px;
+        border-radius: 16px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .row-card:hover {
-        background-color: #111111;
+        background-color: #0c0c0c;
+        border-color: #222222;
     }
     .active-row .row-card {
         border: 1px solid @accent_color;
-        background-color: alpha(@accent_color, 0.05);
+        background-color: alpha(@accent_color, 0.08);
+    }
+
+    .thumbnail {
+        border-radius: 12px;
+        border: 1px solid #222222;
     }
 
     button:not(.suggested-action):not(.destructive-action):not(.flat-button) {
