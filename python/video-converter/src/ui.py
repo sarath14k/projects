@@ -71,7 +71,7 @@ class VideoConverter(Gtk.Window):
         
         # Apply theme label
         pitch = self.theme_switch.get_active()
-        self.theme_label.set_text("Dark" if pitch else "Light")
+        self.theme_label.set_text("Black" if pitch else "Gray")
 
     def on_quit_attempt(self, widget, event):
         if self.conversion_manager.ffmpeg_process:

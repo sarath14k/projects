@@ -23,7 +23,7 @@ def on_theme_toggled(window, switch, state):
     
     # Update label text
     if hasattr(window, 'theme_label'):
-         window.theme_label.set_text("Dark" if state else "Light")
+         window.theme_label.set_text("Black" if state else "Gray")
     
     return False
     
