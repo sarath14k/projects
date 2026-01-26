@@ -238,14 +238,17 @@ class VideoConverter(Gtk.Window):
         
         
         # Load Theme Preference
-        theme_mode = self.config.get("theme_mode", "dark")
-        # Backwards compatibility with old boolean setting
-        if "dark_mode" in self.config and "theme_mode" not in self.config:
-            theme_mode = "dark" if self.config.get("dark_mode") else "light"
+        # Map old "theme_mode" or "dark_mode" to pitch_black boolean
+        pitch_black = False
+        if "pitch_black" in self.config:
+            pitch_black = self.config.get("pitch_black")
+        elif "theme_mode" in self.config:
+            if self.config.get("theme_mode") == "pitch-black":
+                pitch_black = True
             
-        self.theme_combo.set_active_id(theme_mode)
-        # Manually trigger apply since connecting signal happens later/earlier or active_id set might not trigger if same
-        self.on_theme_changed(self.theme_combo)
+        self.theme_switch.set_active(pitch_black)
+        # Apply manually
+        self.on_theme_toggled(self.theme_switch, pitch_black)
 
         # Load Icon
         try:
@@ -328,15 +331,17 @@ class VideoConverter(Gtk.Window):
         
         icon = Gtk.Image.new_from_icon_name("preferences-desktop-theme-symbolic", Gtk.IconSize.MENU)
         
-        self.theme_combo = Gtk.ComboBoxText()
-        self.theme_combo.set_valign(Gtk.Align.CENTER)
-        self.theme_combo.append("light", "Light")
-        self.theme_combo.append("dark", "Dark")
-        self.theme_combo.append("pitch-black", "Pitch Black")
-        self.theme_combo.connect("changed", self.on_theme_changed)
+        self.theme_switch = Gtk.Switch()
+        self.theme_switch.set_valign(Gtk.Align.CENTER)
+        self.theme_switch.connect("state-set", self.on_theme_toggled)
+        
+        # Dynamic label: "Light" (Standard Dark) vs "Dark" (Pitch Black)
+        # Default to Light, will be updated by prefs loading immediately
+        self.theme_label = Gtk.Label(label="Light")
         
         box.pack_start(icon, False, False, 0)
-        box.pack_start(self.theme_combo, False, False, 0)
+        box.pack_start(self.theme_label, False, False, 0)
+        box.pack_start(self.theme_switch, False, False, 0)
         
         header.pack_end(box)
 
@@ -1034,28 +1039,24 @@ class VideoConverter(Gtk.Window):
             "after_complete": self.after_complete.get_active(),
             "last_folder": self.last_folder,
             "gpu_device": self.gpu_device.get_active(),
-            "theme_mode": self.theme_combo.get_active_id(),
+            "pitch_black": self.theme_switch.get_active(),
         }
 
-    def on_theme_changed(self, combo):
-        mode = combo.get_active_id()
-        if not mode:
-            return
-
+    def on_theme_toggled(self, switch, state):
         settings = Gtk.Settings.get_default()
         
-        if mode == "light":
-            settings.set_property("gtk-application-prefer-dark-theme", False)
-            settings.set_property("gtk-theme-name", "Adwaita")
-            self._update_pitch_black_css(False)
-        elif mode == "dark":
-            settings.set_property("gtk-application-prefer-dark-theme", True)
-            settings.set_property("gtk-theme-name", "Adwaita-dark")
-            self._update_pitch_black_css(False)
-        elif mode == "pitch-black":
-            settings.set_property("gtk-application-prefer-dark-theme", True)
-            settings.set_property("gtk-theme-name", "Adwaita-dark")
-            self._update_pitch_black_css(True)
+        # Always prefer dark theme (no more light mode)
+        settings.set_property("gtk-application-prefer-dark-theme", True)
+        settings.set_property("gtk-theme-name", "Adwaita-dark")
+
+        # Apply pitch black override if enabled
+        self._update_pitch_black_css(state)
+        
+        # Update label text
+        if hasattr(self, 'theme_label'):
+             self.theme_label.set_text("Dark" if state else "Light")
+        
+        return False
         
         # Force redraw to apply custom CSS correctly if needed
         self.queue_draw()
@@ -1114,6 +1115,24 @@ class VideoConverter(Gtk.Window):
                 color: inherit;
             }
             .suggested-action:hover { background-color: #3ad68e; }
+
+            /* Explicitly preserve/fix destructive action */
+            .destructive-action {
+                background-color: #e74c3c;
+                color: #ffffff;
+                border: none;
+                border-radius: 4px;
+                background-image: none;
+                box-shadow: none;
+                text-shadow: none;
+                -gtk-icon-shadow: none;
+            }
+            .destructive-action image, .destructive-action box {
+                background-color: transparent;
+                background-image: none;
+                color: inherit;
+            }
+            .destructive-action:hover { background-color: #ff6b6b; }
 
             entry, combobox, spinbutton, treeview, textview, popover, menu, menubar, toolbar {
                 background-color: #000000;
