@@ -3,6 +3,7 @@ import subprocess
 import signal
 import threading
 import os
+from pathlib import Path
 from gi.repository import GLib, Gtk
 
 from ..engine import build_ffmpeg_command, ProgressParser
@@ -30,9 +31,6 @@ class ConversionManager:
         self.window.add_btn.set_sensitive(False)
         self.window.open_out_btn.set_sensitive(False) 
         
-        # Disable remove buttons
-        for row in self.window.file_manager.files.values():
-            row.remove_btn.set_sensitive(False)
 
         self.sleep_inhibitor.start()
         
@@ -76,20 +74,11 @@ class ConversionManager:
                 os.kill(self.ffmpeg_process.pid, signal.SIGSTOP)
             self.window.pause_btn.set_image(Gtk.Image.new_from_icon_name("media-playback-start-symbolic", Gtk.IconSize.BUTTON))
             self.queue_status.set_text("Paused")
-            
-            # Allow removing other files while paused
-            for path, row in self.window.file_manager.files.items():
-                if row != self.current_file_row:
-                    row.remove_btn.set_sensitive(True)
         else:
             if self.ffmpeg_process:
                 os.kill(self.ffmpeg_process.pid, signal.SIGCONT)
             self.window.pause_btn.set_image(Gtk.Image.new_from_icon_name("media-playback-pause-symbolic", Gtk.IconSize.BUTTON))
             self.queue_status.set_text("Processing...")
-            
-            # Re-disable removal while running
-            for row in self.window.file_manager.files.values():
-                row.remove_btn.set_sensitive(False)
 
 
     def _run_queue(self):
@@ -108,15 +97,17 @@ class ConversionManager:
             
             ui(row.set_active, True)
             ui(row.set_reorder_locked, True)
+            ui(row.remove_btn.set_sensitive, False)
             ui(self.queue_status.set_text, f"Processing {i+1} of {total}...")
             
             # Scroll to row
             # adj = self.window.file_list_box.get_adjustment() ... (UI logic mostly)
             
-            self._encode_file(row)
+            self._encode_file(row, file_list, i)
             
             ui(row.set_active, False)
             ui(row.set_reorder_locked, False)
+            ui(row.remove_btn.set_sensitive, True)
             ui(row.set_success)
             ui(row.info.set_text, "Completed")
             ui(row.play_btn.set_visible, True)
@@ -126,7 +117,7 @@ class ConversionManager:
         self.sleep_inhibitor.stop()
         ui(self._on_queue_finished)
 
-    def _encode_file(self, row):
+    def _encode_file(self, row, file_list, current_index):
         # Gather encoding parameters from UI (via window)
         try:
             # We need to access UI elements safely using ui() for values?
@@ -182,6 +173,7 @@ class ConversionManager:
         max_bitrate = max(int(target_bitrate * 1.5), 600_000)
         
         out_path = self.window._get_out_path(row.path)
+        row.out_path = Path(out_path)
         
         cmd = build_ffmpeg_command(
             str(row.path),
@@ -233,7 +225,17 @@ class ConversionManager:
                         last_ui_update = now
                         pct, fps, speed, bitrate, rem = progress
                         # Calculate additional required parameters
-                        q_rem = rem  # For now, just use current file remaining time
+                        # Calculate total queue ETA
+                        q_rem = rem
+                        effective_speed = speed if speed > 0.1 else 1.0
+                        
+                        # Add estimated time for pending files
+                        for j in range(current_index + 1, len(file_list)):
+                            next_row = file_list[j]
+                            # Durations should be available from FileRow (populated on add)
+                            # If not, fallback to current file's duration as estimate
+                            next_dur = next_row.duration if next_row.duration else duration
+                            q_rem += next_dur / effective_speed
                         est_size = int(init_size * pct) if pct > 0 else 0
                         est_size_str = helpers.human_readable_size(est_size) if est_size > 0 else "..."
                         ui(self.window._update_row_ui, row, pct, fps, speed, bitrate, rem, q_rem, init_size_str, est_size_str)
@@ -242,7 +244,15 @@ class ConversionManager:
                     row.log_data.append(line.strip())
                      
             self.ffmpeg_process.wait()
+            return_code = self.ffmpeg_process.returncode
             self.ffmpeg_process = None
+            
+            if return_code == 0 and not self.stop_requested:
+                # Handle post-conversion action (Trash/Delete)
+                # We use ui() to ensure thread safety if the action interacts with UI,
+                # though _handle_source_action mainly does file ops or subprocess.
+                # It reads self.after_action.get_active() which is a GUI call.
+                ui(self.window._handle_source_action, str(row.path))
             
         except Exception as e:
             row.log_data.append(f"\nError: {e}")

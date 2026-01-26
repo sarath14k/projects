@@ -1,4 +1,5 @@
 import os
+import subprocess
 import collections
 from pathlib import Path
 from gi.repository import Gtk, GdkPixbuf, Pango, GLib, Gdk
@@ -22,10 +23,14 @@ class FileRow:
         "log_data",
         "pulse_id",
         "handle",
+        "duration",
+        "out_path",
     )
 
     def __init__(self, path_str, remove_cb):
         self.path = Path(path_str)
+        self.out_path = None
+        self.duration = None
         self.id = path_str
         self.log_data = collections.deque(maxlen=300)
         self.pulse_id = None
@@ -107,7 +112,7 @@ class FileRow:
         self.play_btn = Gtk.Button.new_from_icon_name("media-playback-start-symbolic", Gtk.IconSize.BUTTON)
         self.play_btn.set_no_show_all(True)
         self.play_btn.set_visible(False)
-        self.play_btn.connect("clicked", lambda x: ui(lambda: subprocess.Popen(["xdg-open", str(self.path)])))
+        self.play_btn.connect("clicked", self._on_play)
         
         # Log button
         self.log_btn = Gtk.Button.new_from_icon_name("dialog-warning-symbolic", Gtk.IconSize.BUTTON)
@@ -161,8 +166,18 @@ class FileRow:
                 break
         dialog.destroy()
 
+    def _on_play(self, btn):
+        target = str(self.out_path) if self.out_path else str(self.path)
+        # Return False to stop GLib.idle_add loop
+        ui(lambda: subprocess.Popen(["xdg-open", target]) and False)
+
     def _generate_thumb(self):
         try:
+            # Fetch duration
+            from .. import helpers
+            info = helpers.get_video_info(str(self.path))
+            self.duration = info[0]
+
             # Match original naming
             thumb_path = CACHE_DIR / f"{abs(hash(str(self.path)))}.jpg"
             if not thumb_path.exists():
