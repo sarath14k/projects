@@ -37,9 +37,12 @@ class VideoConverter(Gtk.Window):
         self.sidebar_visible = True
         self.files = {} # Keep compatibility if needed, but managers handle it
         self.last_folder = str(Path.home())
+        self.last_output_dir = None
         self.rem_sec = 0
         self.countdown_source_id = None
         self.config = {} # Initialize config for _combo usage
+        self.proc = None  # Track encoding process state (compatibility)
+        self.active_quality_map = QUALITY_MAP_GPU  # Initialize with default quality map
 
         self._init_ui()
         self._init_shortcuts()
@@ -71,7 +74,7 @@ class VideoConverter(Gtk.Window):
         self.theme_label.set_text("Dark" if pitch else "Light")
 
     def on_quit_attempt(self, widget, event):
-        if self.proc:
+        if self.conversion_manager.ffmpeg_process:
             dialog = Gtk.MessageDialog(
                 transient_for=self,
                 flags=0,
@@ -127,8 +130,8 @@ class VideoConverter(Gtk.Window):
         if event.keyval in [Gdk.KEY_Return, Gdk.KEY_KP_Enter] and (
             event.state & Gdk.ModifierType.CONTROL_MASK
         ):
-            if self.files and not self.proc:
-                self.start(None)
+            if self.file_manager.files and not self.conversion_manager.ffmpeg_process:
+                self.conversion_manager.start_encoding()
             return True
         return False
 
@@ -138,11 +141,13 @@ class VideoConverter(Gtk.Window):
         self.queue_draw()
 
     def _update_empty_state(self):
-        if self.files:
+        # Check FileManager's files, not self.files (which is for compatibility only)
+        files_count = len(self.file_manager.files) if hasattr(self, 'file_manager') else len(self.files)
+        if files_count > 0:
             self.stack.set_visible_child_name("list")
         else:
             self.stack.set_visible_child_name("empty")
-        self.start_btn.set_sensitive(len(self.files) > 0)
+        self.start_btn.set_sensitive(files_count > 0)
 
     def _add_field(self, container, label_text, widget):
         lbl = Gtk.Label(label=label_text.upper(), xalign=0)
@@ -208,7 +213,8 @@ class VideoConverter(Gtk.Window):
                             sub_path = Path(root) / name
                             if sub_path.suffix.lower() in VIDEO_EXTS:
                                 paths.append(str(sub_path))
-            except:
+            except Exception as e:
+                print(f"Error processing drag URI {uri}: {e}")
                 continue
         if paths:
             self.file_manager.add_files(paths)
@@ -232,8 +238,7 @@ class VideoConverter(Gtk.Window):
             dlg.set_current_folder(self.last_folder)
         if dlg.run() == Gtk.ResponseType.OK:
             self.last_folder = dlg.get_current_folder()
-            ConfigManager.save(self._gather_prefs())
-            self.file_manager.add_files([x.get_path() for x in dlg.get_files()])
+            self.file_manager.add_files(dlg.get_filenames())
         dlg.destroy()
 
     # Actions moved to ConversionManager / FileManager
@@ -301,7 +306,7 @@ class VideoConverter(Gtk.Window):
         self.rem_sec = seconds
 
         def _tick():
-            if self.stop_requested:
+            if self.conversion_manager.stop_requested:
                 return False
             if self.rem_sec > 0:
                 self.queue_status.set_markup(

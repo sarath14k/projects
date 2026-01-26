@@ -76,3 +76,6 @@ def build_sidebar(window):
     # After complete
     window.after_complete = window._combo(AFTER_COMPLETE, "after_complete", 0)
     window._add_field(sidebar_content, "Completion", window.after_complete)
+    
+    # Trigger codec change to populate quality dropdown
+    window.on_codec_changed(window.codec)

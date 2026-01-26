@@ -97,7 +97,7 @@ def get_video_info(file_path):
             "-select_streams",
             "v:0",
             "-show_entries",
-            "format=duration,bit_rate:stream=r_frame_rate,codec_name,width",
+            "format=duration,bit_rate:stream=r_frame_rate,codec_name,width,bit_rate",
             "-of",
             "json",
             file_path,
@@ -106,7 +106,13 @@ def get_video_info(file_path):
         data = json.loads(out)
 
         dur = float(data["format"].get("duration", 1.0))
-        src_bitrate = float(data["format"].get("bit_rate", 5_000_000))
+        
+        # Try format bit_rate first, then stream bit_rate
+        src_bitrate = data["format"].get("bit_rate")
+        if not src_bitrate and "streams" in data:
+            src_bitrate = data["streams"][0].get("bit_rate")
+        
+        src_bitrate = float(src_bitrate) if src_bitrate else 5_000_000
 
         fps_str = data["streams"][0].get("r_frame_rate", "30/1")
         fps = (

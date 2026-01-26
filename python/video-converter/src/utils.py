@@ -92,6 +92,10 @@ def load_static_css():
     .dim-label { opacity: 0.8; font-size: 11px; margin-bottom: 2px; font-weight: 600; letter-spacing: 0.5px; }
     .sidebar-bg { background-color: alpha(currentColor, 0.03); border-right: 1px solid alpha(currentColor, 0.1); }
     .row-card { border-radius: 12px; border: 1px solid alpha(currentColor, 0.08); background-color: alpha(currentColor, 0.03); padding: 8px; }
+    .file-list { background: transparent; }
+    .file-list row { padding-bottom: 8px; background: transparent; }
+    .file-list row:last-child { padding-bottom: 0; }
+    .file-list row:hover { background: transparent; }
     .active-row .row-card { border: 1px solid #2ec27e; background-color: alpha(#2ec27e, 0.08); }
     .thumbnail { border-radius: 8px; background-color: #000000; }
     .drag-active { border: 2px dashed #2ec27e; background-color: alpha(#2ec27e, 0.1); }

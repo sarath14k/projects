@@ -24,7 +24,9 @@ class ConversionManager:
         self.paused = False
         self.window.start_btn.set_visible(False)
         self.window.stop_btn.set_visible(True)
+        self.window.stop_btn.set_sensitive(True)
         self.window.pause_btn.set_visible(True)
+        self.window.pause_btn.set_sensitive(True)
         self.window.add_btn.set_sensitive(False)
         self.window.open_out_btn.set_sensitive(False) 
         
@@ -42,24 +44,53 @@ class ConversionManager:
         self.stop_requested = True
         self.current_file_row = None
         if self.ffmpeg_process:
-            self.ffmpeg_process.terminate()
+            try:
+                self.ffmpeg_process.terminate()
+                # Give it a moment, then force kill if still running
+                try:
+                    self.ffmpeg_process.wait(timeout=0.5)
+                except:
+                    self.ffmpeg_process.kill()  # Force kill
+            except:
+                pass
+            self.ffmpeg_process = None
         
         self.window.stop_btn.set_sensitive(False)
         self.window.pause_btn.set_sensitive(False)
-        self.queue_status.set_text("Stopping...")
+        self.queue_status.set_text("Stopped")
+        
+        # Re-enable buttons
+        self.window.start_btn.set_visible(True)
+        self.window.stop_btn.set_visible(False)
+        self.window.pause_btn.set_visible(False)
+        self.window.add_btn.set_sensitive(True)
+        
+        # Re-enable row remove buttons
+        for row in self.window.file_manager.files.values():
+            row.remove_btn.set_sensitive(True)
 
     def pause_resume(self):
         self.paused = not self.paused
         if self.paused:
             if self.ffmpeg_process:
                 os.kill(self.ffmpeg_process.pid, signal.SIGSTOP)
-            self.window.pause_btn.set_icon_name("media-playback-start-symbolic")
+            self.window.pause_btn.set_image(Gtk.Image.new_from_icon_name("media-playback-start-symbolic", Gtk.IconSize.BUTTON))
             self.queue_status.set_text("Paused")
+            
+            # Allow removing other files while paused
+            for path, row in self.window.file_manager.files.items():
+                if row != self.current_file_row:
+                    row.remove_btn.set_sensitive(True)
         else:
             if self.ffmpeg_process:
                 os.kill(self.ffmpeg_process.pid, signal.SIGCONT)
-            self.window.pause_btn.set_icon_name("media-playback-pause-symbolic")
+            self.window.pause_btn.set_image(Gtk.Image.new_from_icon_name("media-playback-pause-symbolic", Gtk.IconSize.BUTTON))
             self.queue_status.set_text("Processing...")
+            
+            # Re-disable removal while running
+            for row in self.window.file_manager.files.values():
+                row.remove_btn.set_sensitive(False)
+
 
     def _run_queue(self):
         file_list = self.window.file_manager.get_file_list()
@@ -68,11 +99,15 @@ class ConversionManager:
         for i, row in enumerate(file_list):
             if self.stop_requested:
                 break
+            # Skip if file was removed from queue while paused or running
+            if row.id not in self.window.file_manager.files:
+                continue
                 
             self.current_file_row = row
             path = row.path
             
             ui(row.set_active, True)
+            ui(row.set_reorder_locked, True)
             ui(self.queue_status.set_text, f"Processing {i+1} of {total}...")
             
             # Scroll to row
@@ -81,6 +116,7 @@ class ConversionManager:
             self._encode_file(row)
             
             ui(row.set_active, False)
+            ui(row.set_reorder_locked, False)
             ui(row.set_success)
             ui(row.info.set_text, "Completed")
             ui(row.play_btn.set_visible, True)
@@ -121,15 +157,29 @@ class ConversionManager:
         
         done = threading.Event()
         def get_params():
-            params["codec"] = self.window.codec.get_active_id()
-            params["quality"] = self.window.quality.get_active_id()
-            params["gpu"] = self.window.gpu_device.get_active_text()
-            # Scale check
+            # Get codec configuration
+            codec_key = self.window.codec.get_active_text()
+            from ..config import CODECS, BITRATE_MULTIPLIER_MAP
+            params["codec"] = CODECS[codec_key]
+            params["quality"] = self.window.active_quality_map.get(self.window.quality.get_active_text(), 26)
+            params["gpu"] = self.window.gpu_device.get_active_id()
             params["scale"] = self.window.scale_chk.get_active()
             done.set()
             
         GLib.idle_add(get_params)
         done.wait()
+        
+        # Get video info
+        from .. import helpers
+        duration, fps, input_codec, src_bitrate, width = helpers.get_video_info(row.path)
+        
+        # Calculate target and max bitrate (bits/s to match FFmpeg expectation)
+        from ..config import BITRATE_MULTIPLIER_MAP
+        quality_val = params["quality"]
+        multiplier = BITRATE_MULTIPLIER_MAP.get(quality_val, 0.5)
+        # Match original C++ logic for minimum bitrate safety
+        target_bitrate = max(int(src_bitrate * multiplier), 300_000)
+        max_bitrate = max(int(target_bitrate * 1.5), 600_000)
         
         out_path = self.window._get_out_path(row.path)
         
@@ -139,10 +189,14 @@ class ConversionManager:
             params["codec"],
             params["quality"],
             params["gpu"],
+            width,
+            input_codec,
+            target_bitrate,
+            max_bitrate,
             params["scale"]
         )
         
-        parser = ProgressParser(self.window._filesize(row.path))
+        parser = ProgressParser(duration, fps)
         
         row.log_data = [] # Reset log
         row.log_data.append(f"Command: {' '.join(cmd)}\n")
@@ -151,23 +205,41 @@ class ConversionManager:
         try:
             self.ffmpeg_process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
+                stdout=subprocess.DEVNULL, # Match original C++ logic
+                stderr=subprocess.PIPE,    # Progress info via pipe:2
+                stdin=subprocess.DEVNULL,
                 universal_newlines=True,
                 bufsize=1
             )
             
-            for line in self.ffmpeg_process.stdout:
+            # Pre-calculate file size for loop optimization
+            from .. import helpers
+            init_size = helpers.get_file_size(row.path)
+            init_size_str = helpers.human_readable_size(init_size)
+            
+            last_ui_update = 0
+            # iterate directly over stderr for maximum efficiency (no busy-waiting)
+            for line in self.ffmpeg_process.stderr:
                 if self.stop_requested:
                     self.ffmpeg_process.terminate()
                     break
                 
-                row.log_data.append(line.strip())
-                
-                # Update UI ~10 times/sec max ideally, but here line by line
+                # Update UI periodically to reduce Gtk thread overhead
                 progress = parser.parse(line)
+                now = time.time()
+                
                 if progress:
-                     ui(self.window._update_row_ui, row, *progress)
+                    if now - last_ui_update > 0.1: # Max 10 updates/sec
+                        last_ui_update = now
+                        pct, fps, speed, bitrate, rem = progress
+                        # Calculate additional required parameters
+                        q_rem = rem  # For now, just use current file remaining time
+                        est_size = int(init_size * pct) if pct > 0 else 0
+                        est_size_str = helpers.human_readable_size(est_size) if est_size > 0 else "..."
+                        ui(self.window._update_row_ui, row, pct, fps, speed, bitrate, rem, q_rem, init_size_str, est_size_str)
+                else:
+                    # Only log lines that are actual output/errors, not progress lines
+                    row.log_data.append(line.strip())
                      
             self.ffmpeg_process.wait()
             self.ffmpeg_process = None
@@ -184,9 +256,10 @@ class ConversionManager:
         self.window.open_out_btn.set_sensitive(True) 
         self.window.queue_status.set_text("Idle")
         
-        # Re-enable remove
+        # Re-enable remove and unlock all reorders
         for row in self.window.file_manager.files.values():
             row.remove_btn.set_sensitive(True)
+            row.set_reorder_locked(False)
             
         # Completion Action
         self.window._handle_completion()

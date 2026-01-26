@@ -10,9 +10,32 @@ PITCH_BLACK_CSS = """
                 background-image: none;
                 border-color: #333333;
             }
+            .dim-label { 
+                opacity: 0.8; 
+                font-size: 10px; 
+                margin-bottom: 2px; 
+                font-weight: bolder; 
+                letter-spacing: 0.5px; 
+            }
             
-            .sidebar-bg { background-color: #000000; border-right: 1px solid #333333; }
-            /* Remove border from standard buttons if requested or make it pitch black */
+            .sidebar-bg { 
+                background-color: alpha(currentColor, 0.03); 
+                border-right: 1px solid alpha(currentColor, 0.1); 
+            }
+            .row-card { 
+                border-radius: 12px; 
+                border: 1px solid alpha(currentColor, 0.08); 
+                background-color: alpha(currentColor, 0.03); 
+                padding: 8px; 
+            }
+            .active-row .row-card { 
+                border: 1px solid #2ec27e; 
+                background-color: alpha(#2ec27e, 0.08); 
+            }
+            .row-card:hover { 
+                background-color: alpha(currentColor, 0.08); 
+                transition: background-color 0.2s ease; 
+            }
             button:not(.suggested-action):not(.destructive-action):not(.flat-button) {
                 background-color: #000000;
                 background-image: none;

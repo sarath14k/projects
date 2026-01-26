@@ -77,17 +77,25 @@ def build_main_area(window):
     # File list
     list_scroll = Gtk.ScrolledWindow()
     list_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-    window.file_list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-    window.file_list_box.set_border_width(12)
+    
+    window.file_list_box = Gtk.ListBox()
+    window.file_list_box.set_selection_mode(Gtk.SelectionMode.NONE)
+    window.file_list_box.get_style_context().add_class("file-list")
+    
+    # Drag-and-drop for reordering AND adding files
+    window.file_list_box.drag_dest_set(
+        Gtk.DestDefaults.ALL,
+        [
+            Gtk.TargetEntry.new("row", Gtk.TargetFlags.SAME_APP, 0),
+            Gtk.TargetEntry.new("text/uri-list", 0, 1)
+        ],
+        Gdk.DragAction.MOVE | Gdk.DragAction.COPY
+    )
+    window.file_list_box.connect("drag-motion", lambda *a: window.file_manager.on_drag_motion(*a))
+    window.file_list_box.connect("drag-data-received", lambda *a: window.file_manager.on_drag_data_received(*a))
+    
     list_scroll.add(window.file_list_box)
     window.stack.add_named(list_scroll, "list")
-
-    # Drag and drop setup
-    window.drag_dest_set(Gtk.DestDefaults.ALL, [], Gdk.DragAction.COPY)
-    window.drag_dest_add_uri_targets()
-    window.connect("drag-data-received", window.on_drag_data_received)
-    window.connect("drag-motion", window.on_drag_motion)
-    window.connect("drag-leave", window.on_drag_leave)
 
     # Bottom controls
     controls_area = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)

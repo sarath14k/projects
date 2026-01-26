@@ -9,8 +9,8 @@ class PrefsManager:
 
     def load_prefs(self):
         try:
-            if CONFIG_FILE.exists():
-                with open(CONFIG_FILE, "r") as f:
+            if CONFIG_PATH.exists():
+                with open(CONFIG_PATH, "r") as f:
                     self.config = json.load(f)
         except Exception as e:
             print(f"Failed to load config: {e}")
@@ -19,7 +19,7 @@ class PrefsManager:
         try:
             CONFIG_DIR.mkdir(parents=True, exist_ok=True)
             prefs = self.gather_prefs()
-            with open(CONFIG_FILE, "w") as f:
+            with open(CONFIG_PATH, "w") as f:
                 json.dump(prefs, f, indent=4)
         except Exception as e:
             print(f"Failed to save config: {e}")

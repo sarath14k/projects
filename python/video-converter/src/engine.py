@@ -1,29 +1,23 @@
 import time
-import re
 import subprocess
-
-# Regex Patterns
-RE_FRAME = re.compile(r"frame=\s*(\d+)")
-RE_TIME = re.compile(r"time=(\d{2}):(\d{2}):(\d+\.\d+)")
-RE_SIZE = re.compile(r"size=\s*(\d+)KiB")
-RE_FPS_SPEED = re.compile(r"fps=\s*(\d+)")
-RE_SPEED_TEXT = re.compile(r"speed=\s*([\d\.]+)x")
-RE_BITRATE = re.compile(r"bitrate=\s*([\d\.]+)\s*kbits/s")
 
 def build_ffmpeg_command(
     file, out, codec_conf, val, device_path, width, input_codec, target_bitrate, max_bitrate, limit_1080p
 ):
-    is_cpu = codec_conf["type"] == "cpu"
+    # Check if using CPU - either codec type is CPU OR device is "cpu"
+    is_cpu = codec_conf["type"] == "cpu" or device_path == "cpu"
     
-    # ─── STABILITY FIX ───
-    # Force CPU decoding to prevent GPU driver crashes (CS cancelled)
-    force_cpu_decode = True 
+    # Force CPU decoding ONLY for AV1 input when using GPU for encoding
+    force_cpu_decode = (input_codec == "av1" and not is_cpu)
 
-    cmd = ["ffmpeg", "-y", "-progress", "pipe:2", "-hide_banner", "-loglevel", "error"]
+    cmd = ["ffmpeg", "-y", "-progress", "pipe:2", "-hide_banner", "-loglevel", "warning"]
 
     if not is_cpu:
-        # Initialize VAAPI device, but DO NOT add -hwaccel vaapi (this disables hw decoding)
+        # Initialize VAAPI device
         cmd.extend(["-init_hw_device", f"vaapi=va:{device_path}", "-filter_hw_device", "va"])
+        if not force_cpu_decode:
+            # Restore hardware accelerated decoding for maximum performance
+            cmd.extend(["-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi", "-extra_hw_frames", "256"])
 
     cmd.extend(["-i", file])
 
@@ -35,13 +29,14 @@ def build_ffmpeg_command(
             vf_chain.append("scale='min(1920,iw)':-2")
         vf_chain.append(f"format={codec_conf['fmt']}")
     else:
-        # ─── UPLOAD TO GPU ───
-        # Since decoding is on CPU, we upload frames to GPU memory here
-        if codec_conf['fmt'] == 'p010': # 10-bit
-            vf_chain.append("format=p010,hwupload")
-        else: # 8-bit
-            vf_chain.append("format=nv12,hwupload")
-
+        # ─── HARDWARE FILTERING ───
+        if force_cpu_decode:
+            # Decoded on CPU, upload to GPU for filtering/encoding
+            if codec_conf['fmt'] == 'p010': # 10-bit
+                vf_chain.append("format=p010,hwupload")
+            else: # 8-bit
+                vf_chain.append("format=nv12,hwupload")
+        
         if should_scale:
             vf_chain.append(f"scale_vaapi=w='min(1920,iw)':h=-2:format={codec_conf['fmt']}")
         else:
@@ -50,17 +45,24 @@ def build_ffmpeg_command(
     if vf_chain:
         cmd.extend(["-vf", ",".join(vf_chain)])
     
-    cmd.extend(["-c:v", codec_conf["name"]])
+    cmd.extend(["-c:v", codec_conf["name"] if not (device_path == "cpu" and codec_conf["type"] != "cpu") else "libx265"])
 
     if is_cpu:
-        cmd.extend(["-crf", "26", "-preset", str(val)])
+        # Use CRF for CPU encoding
+        cmd.extend(["-crf", "26", "-preset", "medium"])
         if codec_conf["name"] == "libsvtav1":
             cmd.extend(["-svtav1-params", "lp=6:lookahead=32:scd=0"])
     else:
-        # GPU Params - Using QP mode for stability with the upload pipeline
-        # We ignore target_bitrate/max_bitrate in this mode to ensure stability
-        # Mapping quality roughly: 18(Best) to 34(Tiny)
-        cmd.extend(["-qp", str(val)])
+        # Restore QVBR mode for optimized GPU encoding performance
+        cmd.extend(["-compression_level", "1"])
+        buf_size = max_bitrate * 2
+        cmd.extend([
+            "-rc_mode", "QVBR",
+            "-global_quality", str(val),
+            "-b:v", str(target_bitrate),
+            "-maxrate", str(max_bitrate),
+            "-bufsize", str(buf_size)
+        ])
 
     cmd.extend([
         "-c:a", "copy",

@@ -7,6 +7,10 @@ CONFIG_PATH = CONFIG_DIR / "config.json"
 CACHE_DIR = Path.home() / ".cache" / APP_NAME
 OUTPUT_DIR_NAME = "Video converter output"
 
+# Ensure directories exist
+CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
 VIDEO_EXTS = {
     ".mp4",
     ".mkv",

@@ -12,15 +12,14 @@ class FileManager:
             if p not in self.files:
                 row = FileRow(
                     p, 
-                    self.remove_file, 
-                    self.move_row_up, 
-                    self.move_row_down
+                    self.remove_file
                 )
                 self.window.file_list_box.add(row.root)
                 self.files[p] = row
                 
                 # Check output conflict
-                out_path = self.window._get_out_path(p)
+                from pathlib import Path
+                out_path = Path(self.window._get_out_path(p))
                 if out_path.exists():
                     row.show_conflict()
 
@@ -32,90 +31,91 @@ class FileManager:
     def remove_file(self, path):
         if path in self.files:
             row = self.files[path]
-            self.window.file_list_box.remove(row.root)
+            # Since root is inside a ListBoxRow (added automatically by Gtk.ListBox.add)
+            # we need to find that row container to remove it.
+            row_container = row.root.get_parent()
+            self.window.file_list_box.remove(row_container)
             del self.files[path]
             self.window._update_empty_state()
             self.window.start_btn.set_sensitive(bool(self.files))
             self.window.open_out_btn.set_sensitive(bool(self.files))
 
     def clear_all(self):
-        for row in self.files.values():
-            self.window.file_list_box.remove(row.root)
-        self.files.clear()
+        # Get the currently encoding file ID from conversion_manager if any
+        current_id = None
+        if hasattr(self.window, "conversion_manager") and self.window.conversion_manager.current_file_row:
+            current_id = self.window.conversion_manager.current_file_row.id
+        
+        # Remove all files except the currently encoding one
+        files_to_remove = [fid for fid in self.files.keys() if fid != current_id]
+        for fid in files_to_remove:
+            row = self.files[fid]
+            row_container = row.root.get_parent()
+            self.window.file_list_box.remove(row_container)
+            del self.files[fid]
+        
+        # If the list is truly empty (nothing was encoding), clear status labels
+        if not self.files:
+            self.window.queue_status.set_markup("Ready.")
+        
         self.window._update_empty_state()
-        self.window.start_btn.set_sensitive(False)
-        self.window.open_out_btn.set_sensitive(False)
+        self.window.start_btn.set_sensitive(bool(self.files))
+        self.window.open_out_btn.set_sensitive(bool(self.files))
 
-    def move_row_up(self, file_id):
-        keys = list(self.files.keys())
-        try:
-            idx = keys.index(file_id)
-            if idx > 0:
-                self.swap_rows(keys[idx], keys[idx - 1])
-        except ValueError:
-            pass
-
-    def move_row_down(self, file_id):
-        keys = list(self.files.keys())
-        try:
-            idx = keys.index(file_id)
-            if idx < len(keys) - 1:
-                self.swap_rows(keys[idx], keys[idx + 1])
-        except ValueError:
-            pass
-
-    def swap_rows(self, id1, id2):
-        row1 = self.files[id1].root
-        row2 = self.files[id2].root
+    def on_drag_motion(self, listbox, context, x, y, time):
+        # Determine if we are dragging a row (reorder) or URIs (adding files)
+        target = listbox.drag_dest_find_target(context, None)
+        is_row = (target and target.name() == "row")
         
-        # We need to reorder the keys in self.files dictionary to match visual order
-        # Python 3.7+ dicts preserve insertion order.
-        # This is a bit tricky with dicts. Ideally we should use a list of objects.
-        # But for listbox reordering:
-        
-        parent = row1.get_parent()
-        idx1 = row1.get_index()
-        idx2 = row2.get_index()
-        
-        # Swap in UI
-        # GtkListBox rows are ordered by index.
-        # To swap, we can just remove and insert? Or use set_sort_func? 
-        # Standard Gtk way is usually just reordering the widget children.
-        
-        # Actually simplest way for small lists:
-        # parent.reorder_child(row1, idx2)
-        # parent.reorder_child(row2, idx1)
-        # Note: changing one index affects the other if not careful.
-        
-        target_idx = idx2 if idx1 < idx2 else idx2
-        # If we move row1 to row2's position...
-        
-        # Let's just swap references in a list if we had one.
-        # Since self.files is a dict, iteration order matters for processing?
-        # Yes, encode_all iterates self.files.
-        
-        # We must reconstruct the dict in the new order.
-        keys = list(self.files.keys())
-        i1, i2 = keys.index(id1), keys.index(id2)
-        keys[i1], keys[i2] = keys[i2], keys[i1]
-        
-        new_files = {k: self.files[k] for k in keys}
-        self.files = new_files
-        
-        # Update UI
-        parent = row1.get_parent() 
-        # parent is the ListBox
-        
-        # To visually swap:
-        # If moving UP: row1 is at i, want it at i-1. row2 is at i-1.
-        # If moving DOWN: row1 is at i,, want it at i+1. row2 is at i+1.
-        
-        if idx1 < idx2:
-            # Moving down
-            parent.reorder_child(row1, idx2)
+        # Highlight target row only for reordering
+        if is_row:
+            row_container = listbox.get_row_at_y(y)
+            if row_container:
+                listbox.drag_highlight_row(row_container)
+            Gdk.drag_status(context, Gdk.DragAction.MOVE, time)
         else:
-            # Moving up
-            parent.reorder_child(row1, idx2)
+            # File drop from outside
+            listbox.drag_unhighlight()
+            Gdk.drag_status(context, Gdk.DragAction.COPY, time)
+            
+        return True
+
+    def on_drag_data_received(self, listbox, context, x, y, data, info, time):
+        # Handle file drops (text/uri-list)
+        if info == 1:
+            self.window.on_drag_data_received(listbox, context, x, y, data, info, time)
+            return
+
+        # Handle reordering (row)
+        dragged_id = data.get_data().decode()
+        if dragged_id not in self.files:
+            Gtk.drag_finish(context, False, False, time)
+            return
+
+        # Find where to drop
+        target_row = listbox.get_row_at_y(y)
+        if not target_row:
+            Gtk.drag_finish(context, False, False, time)
+            return
+
+        dragged_row = self.files[dragged_id].root.get_parent()
+        target_index = target_row.get_index()
+        
+        # Move the row container
+        listbox.remove(dragged_row)
+        listbox.insert(dragged_row, target_index)
+        
+        Gtk.drag_finish(context, True, False, time)
 
     def get_file_list(self):
-        return list(self.files.values())
+        # Return file rows in the order they appear in the Gtk.ListBox
+        ordered_files = []
+        for row_container in self.window.file_list_box.get_children():
+            # The FileRow.root (frame) is the child of the ListBoxRow
+            frame = row_container.get_child()
+            # We need to find which FileRow object matches this frame
+            for f_row in self.files.values():
+                if f_row.root == frame:
+                    ordered_files.append(f_row)
+                    break
+        return ordered_files
