@@ -11,6 +11,7 @@ OUTPUT_DIR_NAME = "Video converter output"
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+
 VIDEO_EXTS = {
     ".mp4",
     ".mkv",
@@ -23,6 +24,14 @@ VIDEO_EXTS = {
     ".mts",
     ".m2ts",
     ".ts",
+}
+
+PRESETS = {
+    "Universal 1080p": "veryfast",
+    "High Efficiency 4K": "medium",
+    "YouTube Optimized": "slow",
+    "Fast 720p": "superfast",
+    "Archives": "veryslow",
 }
 
 CODECS = {

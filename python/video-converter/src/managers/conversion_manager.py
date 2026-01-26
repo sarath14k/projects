@@ -23,18 +23,28 @@ class ConversionManager:
     def start_encoding(self):
         self.stop_requested = False
         self.paused = False
-        self.window.start_btn.set_visible(False)
-        self.window.stop_btn.set_visible(True)
+        
+        # Get list on main thread before starting
+        file_list = self.window.file_manager.get_file_list()
+        if not file_list:
+             self.window.queue_status.set_text("No files to process.")
+             return
+
+        self.window.start_btn.hide()
+        self.window.stop_btn.show()
         self.window.stop_btn.set_sensitive(True)
-        self.window.pause_btn.set_visible(True)
+        self.window.pause_btn.show()
         self.window.pause_btn.set_sensitive(True)
+        
+        self.window.pause_btn.set_image(Gtk.Image.new_from_icon_name("media-playback-pause-symbolic", Gtk.IconSize.BUTTON))
+
         self.window.add_btn.set_sensitive(False)
         self.window.open_out_btn.set_sensitive(False)
 
         self.sleep_inhibitor.start()
 
         # Start Thread
-        t = threading.Thread(target=self._run_queue, daemon=True)
+        t = threading.Thread(target=self._run_queue, args=(file_list,), daemon=True)
         t.start()
 
     def stop_encoding(self):
@@ -71,6 +81,7 @@ class ConversionManager:
 
     def pause_resume(self):
         self.paused = not self.paused
+        
         if self.paused:
             if self.ffmpeg_process:
                 os.kill(self.ffmpeg_process.pid, signal.SIGSTOP)
@@ -82,8 +93,7 @@ class ConversionManager:
             self.window.pause_btn.set_image(Gtk.Image.new_from_icon_name("media-playback-pause-symbolic", Gtk.IconSize.BUTTON))
             self.queue_status.set_text("Processing...")
 
-    def _run_queue(self):
-        file_list = self.window.file_manager.get_file_list()
+    def _run_queue(self, file_list):
         total = len(file_list)
 
         for i, row in enumerate(file_list):
@@ -104,17 +114,19 @@ class ConversionManager:
             # Scroll to row
             # adj = self.window.file_list_box.get_adjustment() ... (UI logic mostly)
 
-            self._encode_file(row, file_list, i)
+            success = self._encode_file(row, file_list, i)
 
             ui(row.set_active, False)
             ui(row.set_reorder_locked, False)
             ui(row.remove_btn.set_sensitive, True)
             
-            # Final UI cleanup for this file
-            ui(row.update_progress, 1.0, 0, 0, 0, 0, 0, "...", "...") # Ensure 100% and clean labels
-            ui(row.set_success)
-            ui(row.info.set_text, "Completed")
-            ui(row.play_btn.set_visible, True)
+            if success:
+                ui(row.update_progress, 1.0, 0, 0, 0, 0, 0, "DONE", "DONE")
+                ui(row.set_success)
+                ui(row.info.set_text, "Completed")
+                ui(row.play_btn.set_visible, True)
+            else:
+                ui(row.info.set_text, "Failed")
 
             # Post-action per file? (Not implemented in original fully for each file, mostly for queue)
 
@@ -123,21 +135,28 @@ class ConversionManager:
 
     def _encode_file(self, row, file_list, current_index):
         params = {}
-        # We need a way to get params synchronously from UI thread.
-        # Hack: generic getter
-
         done = threading.Event()
-        def get_params():
-            # Get codec configuration
-            codec_key = self.window.codec.get_active_text()
-            from ..config import CODECS, BITRATE_MULTIPLIER_MAP
-            params["codec"] = CODECS[codec_key]
-            params["quality"] = self.window.active_quality_map.get(self.window.quality.get_active_text(), 26)
-            params["gpu"] = self.window.gpu_device.get_active_id()
-            params["scale"] = self.window.scale_chk.get_active()
-            done.set()
+        
+        def get_all_params():
+            try:
+                codec_key = self.window.codec.get_active_text()
+                from ..config import CODECS
+                params["codec"] = CODECS.get(codec_key, CODECS["HEVC (VAAPI 10-bit)"])
+                params["quality_text"] = self.window.quality.get_active_text()
+                params["quality_val"] = self.window.active_quality_map.get(params["quality_text"], 26)
+                params["gpu"] = getattr(self.window, "gpu_device_path", "/dev/dri/renderD128")
+                params["scale"] = self.window.scale_chk.get_active()
+            except Exception as e:
+                print(f"Param error: {e}")
+                # Fallback defaults for safety
+                params.setdefault("codec", "libx265")
+                params.setdefault("quality_val", 26)
+                params.setdefault("gpu", "/dev/dri/renderD128")
+                params.setdefault("scale", False)
+            finally:
+                done.set()
 
-        GLib.idle_add(get_params)
+        GLib.idle_add(get_all_params)
         done.wait()
 
         # Get video info
@@ -146,7 +165,7 @@ class ConversionManager:
 
         # Calculate target and max bitrate (bits/s to match FFmpeg expectation)
         from ..config import BITRATE_MULTIPLIER_MAP
-        quality_val = params["quality"]
+        quality_val = params.get("quality_val", 26)
         multiplier = BITRATE_MULTIPLIER_MAP.get(quality_val, 0.5)
         # Match original C++ logic for minimum bitrate safety
         target_bitrate = max(int(src_bitrate * multiplier), 300_000)
@@ -167,7 +186,7 @@ class ConversionManager:
             str(row.path),
             str(out_path),
             params["codec"],
-            params["quality"],
+            quality_val,
             params["gpu"],
             width,
             input_codec,
@@ -178,9 +197,9 @@ class ConversionManager:
 
         parser = ProgressParser(duration, fps)
 
-        row.log_data = [] # Reset log
-        row.log_data.append(f"Command: {' '.join(cmd)}\n")
-        ui(row.log_btn.set_visible, True)
+        row.log_data.clear()
+        row.log_data.append(f"--- Conversion Started: {row.path.name} ---")
+        row.log_data.append(f"Command: {' '.join(cmd)}")
 
         try:
             self.ffmpeg_process = subprocess.Popen(
@@ -245,15 +264,19 @@ class ConversionManager:
 
             if return_code == 0 and not self.stop_requested:
                 ui(self.window._handle_source_action, str(row.path))
+                return True
+            else:
+                row.log_data.append(f"\nFFmpeg exited with code: {return_code}")
+                return False
 
         except Exception as e:
-            row.log_data.append(f"\nError: {e}")
-            ui(row.info.set_text, "Error")
+            row.log_data.append(f"\nError starting process: {e}")
+            return False
 
     def _on_queue_finished(self):
-        self.window.start_btn.set_visible(True)
-        self.window.stop_btn.set_visible(False)
-        self.window.pause_btn.set_visible(False)
+        self.window.start_btn.show_all()
+        self.window.stop_btn.hide()
+        self.window.pause_btn.hide()
         self.window.add_btn.set_sensitive(True)
         self.window.open_out_btn.set_sensitive(True)
         self.window.queue_status.set_text("Idle")

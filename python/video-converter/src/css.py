@@ -1,333 +1,125 @@
 STANDARD_CSS = """
-    @define-color bg_color #242424;
-    @define-color fg_color #eeeeee;
-    @define-color card_bg #323232;
-    @define-color accent_color #2ec27e;
-    @define-color accent_hover #3ad68e;
-    @define-color destructive_color #e74c3c;
-    @define-color destructive_hover #ff6b6b;
+    /* --- Premium Obsidian Dark Design System --- */
+    @define-color primary #818cf8;
+    @define-color primary-hover #6366f1;
+    @define-color success #34d399;
+    @define-color danger #fb7185;
+    @define-color warning #fbbf24;
+    
+    @define-color bg-app #000000;
+    @define-color bg-surface #0a0a0a;
+    @define-color bg-card #111111;
+    @define-color text-main #f8fafc;
+    @define-color text-muted #94a3b8;
+    @define-color border-ui #1e293b;
 
     * {
-        font-family: "Inter", "Roboto", "Segoe UI", "Cantarell", "Ubuntu", sans-serif;
+        font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+        color: @text-main;
+        outline-width: 0;
     }
 
-    window, textview, .background {
-        background-color: @bg_color;
-        color: @fg_color;
-    }
-
-    .dim-label {
-        opacity: 0.6;
-        font-size: 10px;
-        margin-bottom: 2px;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-    }
-
-    .sidebar-bg {
-        background-color: alpha(#000000, 0.1);
-        border-right: 1px solid alpha(#ffffff, 0.05);
-        font-size: 13px;
-    }
-
-    .row-card {
-        border-radius: 6px;
-        border: 1px solid alpha(#ffffff, 0.05);
-        background-color: @card_bg;
-        padding: 18px;
-        margin-bottom: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        transition: all 0.2s ease;
-    }
-
-    .row-card:hover {
-        background-color: shade(@card_bg, 1.05);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        border-color: alpha(@ffffff, 0.1);
-    }
-
-    .file-list { background: transparent; }
-    .file-list row {
-        padding-bottom: 12px;
-        background: transparent;
-        margin-left: 4px;
-        margin-right: 4px;
-    }
-    .file-list row:last-child { padding-bottom: 0; }
-    .file-list row:hover { background: transparent; }
-
-    .active-row .row-card {
-        border: 1px solid @accent_color;
-        background-color: alpha(@accent_color, 0.08);
-    }
-
-    .thumbnail {
-        border-radius: 6px;
-        background-color: #000000;
-        border: 3px solid #222222;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-    }
-
-    .filename-label {
-        font-weight: 800;
-        font-size: 13px;
-        color: @fg_color;
-        margin-top: 4px;
-    }
-
-    .empty-icon {
-        background-color: transparent;
-        background-image: none;
+    window, .background, scrolledwindow, viewport, list {
+        background-color: @bg-app;
         border: none;
-        box-shadow: none;
     }
 
-    .drag-active {
-        border: 2px dashed @accent_color;
-        background-color: alpha(@accent_color, 0.1);
-        border-radius: 16px;
-    }
-
-    .drag-active .empty-icon,
-    .drag-active image,
-    .drag-active box {
-        background-color: transparent;
+    headerbar {
         background-image: none;
+        background-color: @bg-surface;
+        border-bottom: 1px solid @border-ui;
     }
 
-    button {
-        min-height: 34px;
-        min-width: 34px;
-        padding: 0 8px;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: background-color 0.15s ease;
+    .status-bar {
+        background-color: @bg-app;
+        border-top: 1px solid @border-ui;
+        padding: 8px 20px;
+        font-size: 11px;
+        color: @text-muted;
     }
 
-    .destructive-action {
-        background-image: none;
-        background-color: @destructive_color;
-        color: white;
-        border: none;
-        min-height: 34px;
-        min-width: 34px;
-        padding: 0 8px;
-    }
-    .destructive-action image, .destructive-action box {
-        background-color: transparent;
-        background-image: none;
-        color: inherit;
-    }
-    .destructive-action:hover { background-color: @destructive_hover; }
-
-    .flat-button {
-        min-height: 28px;
-        min-width: 28px;
-        padding: 4px;
-        margin: 0px;
-        border: none;
-        background: transparent;
-        box-shadow: none;
-        color: alpha(@fg_color, 0.6);
-        border-radius: 50%;
-    }
-    .flat-button:hover {
-        background-color: alpha(@fg_color, 0.1);
-        color: @accent_color;
-    }
-    .flat-button:active { background-color: alpha(@fg_color, 0.2); }
-
-    .suggested-action {
-        background-image: none;
-        background-color: @accent_color;
-        color: #000000;
+    .sidebar-header {
+        background-color: @bg-surface;
+        border-bottom: 1px solid @border-ui;
+        padding: 14px 24px;
         font-weight: 700;
-        border: none;
-        border-radius: 8px;
-        padding: 0 8px;
-        min-height: 34px;
-        min-width: 34px;
-    }
-    .suggested-action label { background-color: transparent; color: inherit; }
-    .suggested-action:hover { background-color: @accent_hover; }
-    .suggested-action:disabled {
-        background-color: alpha(@fg_color, 0.1);
-        color: alpha(@fg_color, 0.4);
+        font-size: 18px;
     }
 
-    .row-remove-btn {
-        color: alpha(@fg_color, 0.5);
-        margin-right: 12px;
+    list row {
+        background-color: transparent;
+        padding: 0;
+        margin: 0;
     }
-    .row-remove-btn:hover {
-        color: @destructive_hover;
-        background-color: alpha(@destructive_color, 0.15);
-        border-radius: 50%;
+    list row:selected { background-color: transparent; }
+
+    .video-card {
+        background-color: @bg-card;
+        border: 1px solid @border-ui;
+        border-radius: 12px;
+        margin: 6px 16px;
+        padding: 12px;
+    }
+    .video-card:hover { background-color: #1a1a1a; }
+    .active-card {
+        border-color: @primary;
+        background-color: alpha(@primary, 0.05);
     }
 
-    progressbar {
-        margin-bottom: 4px;
+    .inspector-pane {
+        background-color: @bg-surface;
+        border-left: 1px solid @border-ui;
     }
 
-    progressbar trough {
-        min-height: 6px;
-        border-radius: 3px;
-        background-color: alpha(#000000, 0.3);
+    .inspector-filename {
+        font-weight: 700;
+        font-size: 20px;
     }
-    progressbar progress {
-        min-height: 6px;
-        border-radius: 3px;
-        background-color: @accent_color;
+
+    .studio-preview-frame {
+        background-color: #000;
+        border-radius: 12px;
+        border: 4px solid #1e293b;
+    }
+    .studio-preview-frame image { border-radius: 8px; }
+    .immersive-preview-bg { background-color: transparent; padding: 20px 10px; }
+
+    .btn {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 700;
+        border: 1px solid transparent;
         background-image: none;
-        border: none;
     }
+    
+    .btn-primary { background-color: @primary; color: #000; }
+    .btn-success { background-color: @success; color: #000; }
+    .btn-danger { background-color: @danger; color: #000; }
+    .btn-outline-secondary { background-color: #222; border-color: @border-ui; color: #fff; }
+    .btn-icon { padding: 6px; border-radius: 8px; background-color: transparent; }
 
-    .success-bar progress {
-        background-color: @accent_color;
-    }
+    .text-primary { color: @primary; }
+    .text-success { color: @success; }
+    .text-danger { color: @danger; }
+    .text-warning { color: @warning; }
 
-    /* Small Window Overrides */
-    .small-window .filename-label { font-size: 11px; }
-    .small-window .dim-label { font-size: 11px; }
+    /* Tiny Window - Compact Everything */
+    .tiny-window .sidebar-header { padding: 8px 12px; font-size: 14px; }
+    .tiny-window .video-card { margin: 4px 8px; padding: 8px; }
+    .tiny-window .inspector-pane { padding: 0; }
+    .tiny-window .immersive-preview-bg { padding: 8px 4px; }
+    .tiny-window .studio-preview-frame { border-width: 2px; border-radius: 8px; }
+    .tiny-window .inspector-filename { font-size: 14px; }
+    .tiny-window .dim-label { font-size: 10px; }
+    .tiny-window .btn { padding: 4px 8px; font-size: 11px; }
+    .tiny-window combobox { min-width: 60px; }
+    
+    .small-window .inspector-pane { border-left: none; border-top: 4px solid @primary; }
 """
 
-PITCH_BLACK_CSS = """
-    @define-color bg_color #000000;
-    @define-color fg_color #ffffff;
-    @define-color card_bg #080808;
-
-    * {
-        -gtk-icon-style: symbolic;
-    }
-
-    window, .background, headerbar, list, treeview, textview, eventbox, scrolledwindow, viewport, box {
-        background-color: @bg_color;
-        background-image: none;
-        border-color: #333333;
-        color: @fg_color;
-    }
-
-    .sidebar-bg {
-        background-color: @bg_color;
-        border-right: none;
-        font-size: 13px;
-    }
-
-    .row-card {
-        background-color: @card_bg;
-        border: 1px solid #181818;
-        padding: 18px;
-        margin-bottom: 8px;
-        border-radius: 10px;
-        transition: all 0.2s ease;
-    }
-    .row-card:hover {
-        background-color: #121212;
-        border-color: #333333;
-    }
-    .active-row .row-card {
-        border: 1px solid @accent_color;
-        background-color: alpha(@accent_color, 0.05);
-    }
-
-    .thumbnail {
-        border-radius: 6px;
-        border: 3px solid #333333;
-    }
-
-    button:not(.suggested-action):not(.destructive-action):not(.flat-button) {
-        background-color: @card_bg;
-        background-image: none;
-        border: none;
-        box-shadow: none;
-        text-shadow: none;
-        color: @fg_color;
-    }
-    button:not(.suggested-action):not(.destructive-action):not(.flat-button):hover {
-        background-color: #161616;
-    }
-    button:not(.suggested-action):not(.destructive-action):not(.flat-button):active {
-        background-color: #222222;
-    }
-
-    .suggested-action {
-        background-color: #2ec27e;
-        color: #000000;
-        border: none;
-    }
-    .suggested-action:hover {
-        background-color: #3ad68e;
-    }
-
-    button image, button box, button > * {
-        background-color: transparent;
-        background-image: none;
-        border: none;
-        box-shadow: none;
-    }
-
-    entry, combobox, spinbutton, treeview, textview, popover, menu, menubar, toolbar {
-        background-color: @bg_color;
-        color: @fg_color;
-        border: none;
-        box-shadow: none;
-    }
-
-    combobox button,
-    combobox > box.linked > button.combo {
-         background-color: @bg_color;
-         border: none;
-         box-shadow: none;
-    }
-    combobox box, combobox cellview {
-         background-color: transparent;
-         color: @fg_color;
-    }
-
-    menuitem, modelbutton {
-        color: @fg_color;
-        background-color: @bg_color;
-    }
-    menuitem:hover, modelbutton:hover {
-        background-color: #111111;
-    }
-
-    scrollbar slider {
-        background-color: #333333;
-    }
-    progressbar trough {
-        background-color: #222222;
-    }
-
-    .empty-icon,
-    .drag-active .empty-icon,
-    .drag-active image,
-    .drag-active box,
-    .drag-active label {
-        background-color: transparent;
-        background-image: none;
-    }
-
-    .row-remove-btn {
-        margin-right: 12px;
-    }
-
-    .drag-active {
-        background-color: alpha(#2ec27e, 0.05);
-    }
-
-    progressbar progress {
-        background-color: @accent_color;
-        background-image: none;
-        border: none;
-    }
-
-    .success-bar progress {
-
-        background-color: @accent_color;
-    }
-
-    /* Small Window Overrides */
-    .small-window .filename-label { font-size: 12px; }
-    .small-window .dim-label { font-size: 12px; }
-"""
+PITCH_BLACK_CSS = (
+    STANDARD_CSS.replace("@define-color bg-surface #0a0a0a;", "@define-color bg-surface #000000;")
+    .replace("@define-color bg-card #111111;", "@define-color bg-card #000000;")
+    .replace("@define-color border-ui #1e293b;", "@define-color border-ui #111111;")
+    .replace("background-color: #1a1a1a;", "background-color: #050505;")
+)

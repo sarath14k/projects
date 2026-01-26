@@ -12,18 +12,19 @@ class FileRow:
         "id",
         "root",
         "label",
-        "remove_btn",
-        "play_btn",
         "progress",
         "info",
         "conflict",
         "thumb",
-        "log_btn",
         "log_data",
         "pulse_id",
         "handle",
         "duration",
         "out_path",
+        "remove_btn",
+        "play_btn",
+        "log_btn",
+        "full_pixbuf",
     )
 
     def __init__(self, path_str, remove_cb):
@@ -33,175 +34,86 @@ class FileRow:
         self.id = path_str
         self.log_data = collections.deque(maxlen=300)
         self.pulse_id = None
+        self.full_pixbuf = None
 
-        # EventBox root for full-row dragging
+        # EventBox for interaction (Click/Drag)
         eb = Gtk.EventBox()
-        eb.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.POINTER_MOTION_MASK)
         eb.get_style_context().add_class("row-card")
         self.root = eb
-
-        frame = Gtk.Frame()
-        frame.set_shadow_type(Gtk.ShadowType.NONE)
-        eb.add(frame)
-
-        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        
+        # We don't need complex drag logic here for internal widgets
+        # The ListBox will mostly handle selection.
+        # But for drag-reorder, we still might want source set.
+        # Actually, let's keep it simple: ListBoxRow handles selection.
+        # We just provide the visual content.
+        
+        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
         hbox.set_border_width(0)
-        frame.add(hbox)
+        eb.add(hbox)
 
-        # Setup full-row drag source
-        eb.drag_source_set(
-            Gdk.ModifierType.BUTTON1_MASK,
-            [Gtk.TargetEntry.new("row", 0, 0)],
-            Gdk.DragAction.MOVE
-        )
-        eb.connect("drag-begin", self.on_drag_begin)
-        eb.connect("drag-data-get", self.on_drag_data_get)
-
-        # Cursor feedback for the whole row
-        eb.connect("enter-notify-event", self._on_handle_enter)
-        eb.connect("leave-notify-event", self._on_handle_leave)
-
-        # Reference for locking (the whole EventBox)
-        self.handle = eb
-
-        # Thumbnail
+        # Thumbnail (Small & Minimal)
         self.thumb = Gtk.Image.new_from_icon_name("video-x-generic-symbolic", Gtk.IconSize.DIALOG)
         self.thumb.set_pixel_size(48)
-        self.thumb.set_opacity(0.3)
+        self.thumb.set_opacity(0.1)
         self.thumb.get_style_context().add_class("thumbnail")
-        self.thumb.set_size_request(110, 62)
+        self.thumb.set_size_request(80, 48)
         hbox.pack_start(self.thumb, False, False, 0)
-
-        # Content box (filename, info, progress)
-        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        hbox.pack_start(content_box, True, True, 0)
-
-        # Top line with filename and conflict warning
-        top_line = Gtk.Box(spacing=6)
-        content_box.pack_start(top_line, False, False, 0)
+        
+        # Info Box
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        vbox.set_valign(Gtk.Align.CENTER)
+        hbox.pack_start(vbox, True, True, 0)
 
         # Filename
         fname = os.path.basename(path_str)
         self.label = Gtk.Label(label=fname, xalign=0)
         self.label.set_ellipsize(Pango.EllipsizeMode.MIDDLE)
-        self.label.set_lines(2)
-        self.label.set_line_wrap(True)
-        self.label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
-        self.label.set_width_chars(1) # Allow shrinking to min
+        self.label.set_width_chars(1) # Allow shrinking
         self.label.get_style_context().add_class("filename-label")
-        top_line.pack_start(self.label, True, True, 0)
+        vbox.pack_start(self.label, False, False, 0)
 
-        # Conflict Warning
+        # Status & Progress Area
+        status_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        vbox.pack_start(status_box, False, False, 0)
+        
+        self.info = Gtk.Label(label="Pending", xalign=0)
+        self.info.get_style_context().add_class("dim-label")
+        status_box.pack_start(self.info, False, False, 0)
+
+        self.progress = Gtk.ProgressBar()
+        self.progress.set_hexpand(True)
+        self.progress.set_valign(Gtk.Align.CENTER)
+        status_box.pack_start(self.progress, True, True, 0)
+
         self.conflict = Gtk.Label()
         self.conflict.set_no_show_all(True)
         self.conflict.set_visible(False)
-        top_line.pack_start(self.conflict, False, False, 0)
+        status_box.pack_end(self.conflict, False, False, 0)
 
-        # Info label
-        self.info = Gtk.Label(label="Pending...", xalign=0)
-        self.info.set_use_markup(True)
-        self.info.set_ellipsize(Pango.EllipsizeMode.END)
-        self.info.set_width_chars(1) # Allow shrinking to min
-        self.info.get_style_context().add_class("dim-label")
-        content_box.pack_start(self.info, False, False, 0)
-
-        # Progress bar
-        self.progress = Gtk.ProgressBar()
-        self.progress.set_hexpand(True)
-        content_box.pack_start(self.progress, False, False, 0)
-
-        # Action buttons on the right (horizontally stacked)
-        action_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        action_box.set_valign(Gtk.Align.CENTER)
-
-        # Play button
-        self.play_btn = Gtk.Button.new_from_icon_name("media-playback-start-symbolic", Gtk.IconSize.BUTTON)
+        # Compatibility placeholders
+        self.remove_btn = Gtk.Button()
+        self.play_btn = Gtk.Button()
+        self.log_btn = Gtk.Button()
+        self.remove_btn.set_no_show_all(True)
         self.play_btn.set_no_show_all(True)
-        self.play_btn.set_visible(False)
-        self.play_btn.connect("clicked", self._on_play)
-
-        # Log button
-        self.log_btn = Gtk.Button.new_from_icon_name("dialog-warning-symbolic", Gtk.IconSize.BUTTON)
         self.log_btn.set_no_show_all(True)
-        self.log_btn.set_visible(False)
-        self.log_btn.get_style_context().add_class("destructive-action")
-        self.log_btn.connect("clicked", self.show_log)
-
-        # Remove button
-        self.remove_btn = Gtk.Button.new_from_icon_name("user-trash-symbolic", Gtk.IconSize.BUTTON)
-        self.remove_btn.get_style_context().add_class("row-remove-btn")
-        self.remove_btn.connect("clicked", lambda _: remove_cb(self.id))
-
-        action_box.pack_start(self.play_btn, False, False, 0)
-        action_box.pack_start(self.log_btn, False, False, 0)
-        action_box.pack_start(self.remove_btn, False, False, 0)
-        hbox.pack_end(action_box, False, False, 0)
 
         THUMB_POOL.submit(self._generate_thumb)
 
-    def show_log(self, btn):
-        dialog = Gtk.Dialog(title="FFmpeg Log", flags=0)
-        dialog.add_buttons("Copy", 1, "Clear", 2, "Close", Gtk.ResponseType.CLOSE)
-        dialog.set_default_size(700, 500)
-
-        box = dialog.get_content_area()
-        box.set_spacing(10)
-        box.set_border_width(10)
-        scrolled = Gtk.ScrolledWindow()
-        scrolled.set_hexpand(True)
-        scrolled.set_vexpand(True)
-        box.add(scrolled)
-
-        text_view = Gtk.TextView()
-        text_view.set_editable(False)
-        text_view.set_monospace(True)
-        log_text = "\n".join(self.log_data) if isinstance(self.log_data, list) else str(self.log_data)
-        text_view.get_buffer().set_text(log_text)
-        scrolled.add(text_view)
-
-        dialog.show_all()
-        while True:
-            response = dialog.run()
-            if response == 1:  # Copy
-                clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-                clipboard.set_text(log_text, -1)
-            elif response == 2:  # Clear
-                self.log_data.clear()
-                text_view.get_buffer().set_text("")
-            else:
-                break
-        dialog.destroy()
-
-    def _on_play(self, btn):
-        target = str(self.out_path) if self.out_path else str(self.path)
-        # Return False to stop GLib.idle_add loop
-        ui(lambda: subprocess.Popen(["xdg-open", target]) and False)
-
     def _generate_thumb(self):
         try:
-            # Fetch duration
             from .. import utils
             info = utils.get_video_info(str(self.path))
             self.duration = info[0]
 
-            # Match original naming
             thumb_path = CACHE_DIR / f"{abs(hash(str(self.path)))}.jpg"
             if not thumb_path.exists():
                 import subprocess
-                # Try original command: seek to 5s
                 subprocess.run([
                     "ffmpeg", "-ss", "5", "-i", str(self.path),
-                    "-vframes", "1", "-vf", "scale=192:-1",
-                    "-q:v", "5", str(thumb_path)
+                    "-vframes", "1", "-vf", "scale=640:-1",
+                    "-q:v", "2", str(thumb_path)
                 ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-                # Fallback: if 5s seek failed (short video), try 0s
-                if not thumb_path.exists():
-                    subprocess.run([
-                        "ffmpeg", "-ss", "0", "-i", str(self.path),
-                        "-vframes", "1", "-vf", "scale=192:-1",
-                        "-q:v", "5", str(thumb_path)
-                    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
             if thumb_path.exists():
                 ui(self._set_thumb, str(thumb_path))
@@ -210,8 +122,11 @@ class FileRow:
 
     def _set_thumb(self, path):
         try:
-            # Match the set_size_request(110, 62)
-            pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 110, 62, True)
+            # Load full res (640px)
+            self.full_pixbuf = GdkPixbuf.Pixbuf.new_from_file(path)
+            
+            # Scale down for list view
+            pix = self.full_pixbuf.scale_simple(80, 48, GdkPixbuf.InterpType.HYPER)
             self.thumb.set_from_pixbuf(pix)
             self.thumb.set_opacity(1.0)
         except:
@@ -220,55 +135,39 @@ class FileRow:
     def set_active(self, active):
         if active:
             self.root.get_style_context().add_class("active-row")
-            self.label.get_style_context().add_class("activity-text")
         else:
             self.root.get_style_context().remove_class("active-row")
-            self.label.get_style_context().remove_class("activity-text")
 
     def show_conflict(self):
-        self.conflict.set_markup("<span foreground='#f39c12' weight='bold' size='small'>⚠ Overwrite</span>")
+        self.conflict.set_markup("<span foreground='#f39c12' weight='bold' size='small'>⚠ Exist</span>")
         self.conflict.show()
 
     def set_success(self):
         self.progress.get_style_context().add_class("success-bar")
 
     def set_reorder_locked(self, locked):
-        if locked:
-            self.root.drag_source_unset()
-        else:
-            self.root.drag_source_set(
-                Gdk.ModifierType.BUTTON1_MASK,
-                [Gtk.TargetEntry.new("row", 0, 0)],
-                Gdk.DragAction.MOVE
-            )
+        """Placeholder for reorder locking."""
+        pass
 
-    def on_drag_begin(self, widget, context):
-        # Create a nice drag icon
-        from gi.repository import Gtk
-        icon_box = Gtk.Box(spacing=10)
-        icon_box.set_border_width(6)
-        icon_box.get_style_context().add_class("row-card")
-
-        lbl = Gtk.Label(label=os.path.basename(str(self.path)))
-        icon_box.add(lbl)
-        icon_box.show_all()
-
-        Gtk.drag_set_icon_widget(context, icon_box, 0, 0)
-
-    def on_drag_data_get(self, widget, context, data, info, time):
-        # Set the file ID as the drag data
-        data.set(Gdk.Atom.intern_static_string("row"), 8, str(self.id).encode())
-
-    def _on_handle_enter(self, widget, event):
-        window = widget.get_window()
-        if window:
-            cursor = Gdk.Cursor.new_from_name(Gdk.Display.get_default(), "move")
-            window.set_cursor(cursor)
-
-    def _on_handle_leave(self, widget, event):
-        window = widget.get_window()
-        if window:
-            window.set_cursor(None)
+    def show_log(self, _):
+        """Show FFmpeg log in a dialog."""
+        dialog = Gtk.MessageDialog(
+            transient_for=self.root.get_toplevel(),
+            flags=0,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.OK,
+            text=f"Log: {os.path.basename(str(self.path))}",
+        )
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_size_request(600, 400)
+        tv = Gtk.TextView()
+        tv.set_editable(False)
+        tv.get_buffer().set_text("\n".join(self.log_data))
+        scroll.add(tv)
+        dialog.get_content_area().pack_start(scroll, True, True, 0)
+        dialog.show_all()
+        dialog.run()
+        dialog.destroy()
 
     def update_progress(self, pct, fps, speed, bitrate, rem, q_rem, init_size_str, est_size_str):
         if self.pulse_id:
@@ -276,10 +175,9 @@ class FileRow:
             self.pulse_id = None
 
         self.progress.set_fraction(pct)
-        from .. import utils
-        markup = (
-            f"<span size='large'><b>{int(pct * 100)}%</b> • <span foreground='#2ec27e'><b>{fps:.0f} fps</b></span> • <span foreground='#62a0ea'>x{speed:.1f}</span> • "
-            f"<span foreground='#ffb74d'><b>ETA: {utils.format_time(rem)}</b></span></span>\n"
-            f"<span size='medium' alpha='80%'>{init_size_str} ➝ <span foreground='#c061cb'>{est_size_str}</span></span>"
-        )
-        self.info.set_markup(markup)
+        # Show detailed info: percentage, speed, fps, and bitrate
+        bitrate_str = f"{bitrate:.0f}kbps" if bitrate > 0 else "N/A"
+        info_text = f"{int(pct*100)}% | {speed:.1f}x | {bitrate_str}"
+        if fps > 0:
+            info_text += f" | {int(fps)}fps"
+        self.info.set_text(info_text)
