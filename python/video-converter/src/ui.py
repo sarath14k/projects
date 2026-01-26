@@ -235,6 +235,17 @@ class VideoConverter(Gtk.Window):
         load_static_css()
         self._update_empty_state()
         self.on_codec_changed(self.codec)
+        
+        
+        # Load Theme Preference
+        theme_mode = self.config.get("theme_mode", "dark")
+        # Backwards compatibility with old boolean setting
+        if "dark_mode" in self.config and "theme_mode" not in self.config:
+            theme_mode = "dark" if self.config.get("dark_mode") else "light"
+            
+        self.theme_combo.set_active_id(theme_mode)
+        # Manually trigger apply since connecting signal happens later/earlier or active_id set might not trigger if same
+        self.on_theme_changed(self.theme_combo)
 
         # Load Icon
         try:
@@ -310,6 +321,24 @@ class VideoConverter(Gtk.Window):
             "clicked", lambda _: self.toggle_sidebar(not self.sidebar_visible)
         )
         header.pack_start(self.hamburger_btn)
+
+        # Theme Switcher
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        box.set_valign(Gtk.Align.CENTER)
+        
+        icon = Gtk.Image.new_from_icon_name("preferences-desktop-theme-symbolic", Gtk.IconSize.MENU)
+        
+        self.theme_combo = Gtk.ComboBoxText()
+        self.theme_combo.set_valign(Gtk.Align.CENTER)
+        self.theme_combo.append("light", "Light")
+        self.theme_combo.append("dark", "Dark")
+        self.theme_combo.append("pitch-black", "Pitch Black")
+        self.theme_combo.connect("changed", self.on_theme_changed)
+        
+        box.pack_start(icon, False, False, 0)
+        box.pack_start(self.theme_combo, False, False, 0)
+        
+        header.pack_end(box)
 
         self.overlay = Gtk.Overlay()
         self.add(self.overlay)
@@ -753,7 +782,7 @@ class VideoConverter(Gtk.Window):
                 "-select_streams",
                 "v:0",
                 "-show_entries",
-                "format=duration,bit_rate:stream=r_frame_rate,codec_name",
+                "format=duration,bit_rate:stream=r_frame_rate,codec_name,width",
                 "-of",
                 "json",
                 f,
@@ -772,9 +801,10 @@ class VideoConverter(Gtk.Window):
             )
             codec = data["streams"][0].get("codec_name", "unknown")
 
-            return dur, fps, codec, src_bitrate
+            width = int(data["streams"][0].get("width", 1920))
+            return dur, fps, codec, src_bitrate, width
         except:
-            return 1.0, 30.0, "unknown", 5_000_000
+            return 1.0, 30.0, "unknown", 5_000_000, 1920
 
     def encode_all(self):
         self.inhibitor.start()
@@ -794,7 +824,7 @@ class VideoConverter(Gtk.Window):
                     if next_file is None:
                         next_file = f
                     else:
-                        future_sec += self.file_info_cache.get(f, (0, 0, 0, 0))[0]
+                        future_sec += self.file_info_cache.get(f, (0, 0, 0, 0, 0))[0]
             if next_file is None:
                 break
             self.current_file = next_file
@@ -836,8 +866,8 @@ class VideoConverter(Gtk.Window):
 
         GLib.idle_add(lambda: setattr(row, "pulse_id", GLib.timeout_add(100, _pulse)))
 
-        dur, src_fps, input_codec, src_bitrate = self.file_info_cache.get(
-            file, (1.0, 30.0, "unknown", 5_000_000)
+        dur, src_fps, input_codec, src_bitrate, width = self.file_info_cache.get(
+            file, (1.0, 30.0, "unknown", 5_000_000, 1920)
         )
         out = self._get_out_path(file)
         codec_key = self.codec.get_active_text()
@@ -857,16 +887,17 @@ class VideoConverter(Gtk.Window):
             CODECS[codec_key],
             val,
             device_path,
-            self.scale_chk.get_active(),
+            width,
             input_codec,
             target_k,
             maxrate_k,
+            self.scale_chk.get_active(),
         )
 
         ui(self.queue_status.set_text, f"Processing: {os.path.basename(file)}...")
         init_size = self._filesize(file)
         init_size_str = self._human_size(init_size)
-        parser = ProgressParser(dur)
+        parser = ProgressParser(dur, src_fps)
 
         try:
             self.proc = subprocess.Popen(
@@ -1003,4 +1034,161 @@ class VideoConverter(Gtk.Window):
             "after_complete": self.after_complete.get_active(),
             "last_folder": self.last_folder,
             "gpu_device": self.gpu_device.get_active(),
+            "theme_mode": self.theme_combo.get_active_id(),
         }
+
+    def on_theme_changed(self, combo):
+        mode = combo.get_active_id()
+        if not mode:
+            return
+
+        settings = Gtk.Settings.get_default()
+        
+        if mode == "light":
+            settings.set_property("gtk-application-prefer-dark-theme", False)
+            settings.set_property("gtk-theme-name", "Adwaita")
+            self._update_pitch_black_css(False)
+        elif mode == "dark":
+            settings.set_property("gtk-application-prefer-dark-theme", True)
+            settings.set_property("gtk-theme-name", "Adwaita-dark")
+            self._update_pitch_black_css(False)
+        elif mode == "pitch-black":
+            settings.set_property("gtk-application-prefer-dark-theme", True)
+            settings.set_property("gtk-theme-name", "Adwaita-dark")
+            self._update_pitch_black_css(True)
+        
+        # Force redraw to apply custom CSS correctly if needed
+        self.queue_draw()
+
+    def _update_pitch_black_css(self, enabled):
+        if not hasattr(self, "pitch_black_provider"):
+            self.pitch_black_provider = Gtk.CssProvider()
+            css = """
+            @define-color theme_bg_color #000000;
+            @define-color theme_base_color #000000;
+            @define-color theme_fg_color #ffffff;
+            @define-color window_bg_color #000000;
+            @define-color window_fg_color #ffffff;
+            
+            window, .background, headerbar, list, treeview, textview, eventbox, scrolledwindow, viewport, box {
+                background-color: #000000;
+                background-image: none;
+                border-color: #333333;
+            }
+            
+            .sidebar-bg { background-color: #000000; border-right: 1px solid #333333; }
+            /* Remove border from standard buttons if requested or make it pitch black */
+            button:not(.suggested-action):not(.destructive-action):not(.flat-button) {
+                background-color: #000000;
+                background-image: none;
+                border: 1px solid #222222; 
+                border-radius: 4px;
+                box-shadow: none;
+                text-shadow: none;
+                color: #ffffff;
+            }
+            
+            button:not(.suggested-action):not(.destructive-action):not(.flat-button):hover {
+                background-color: #111111;
+                border-color: #444444;
+            }
+            button:not(.suggested-action):not(.destructive-action):not(.flat-button):active {
+                background-color: #222222;
+            }
+            
+            /* Explicitly preserve/fix suggested action */
+            /* Explicitly preserve/fix suggested action */
+            .suggested-action {
+                background-color: #2ec27e;
+                color: #000000;
+                border: none;
+                border-radius: 4px;
+                background-image: none;
+                box-shadow: none;
+                text-shadow: none;
+                -gtk-icon-shadow: none;
+            }
+            .suggested-action image, .suggested-action box {
+                background-color: transparent;
+                background-image: none;
+                color: inherit;
+            }
+            .suggested-action:hover { background-color: #3ad68e; }
+
+            entry, combobox, spinbutton, treeview, textview, popover, menu, menubar, toolbar {
+                background-color: #000000;
+                color: #ffffff;
+                border: none;
+                border-radius: 0;
+                box-shadow: none;
+                outline-width: 0px;
+                outline: none;
+                -gtk-outline-radius: 0;
+            }
+
+            /* Deep targeting for combobox internals */
+            combobox *, 
+            combobox button, 
+            combobox button.combo,
+            combobox > box.linked > button.combo {
+               background-color: #000000;
+               background-image: none;
+               border: none;
+               border-image: none;
+               border-radius: 0;
+               box-shadow: none;
+               outline: none;
+               text-shadow: none;
+            }
+            
+            /* Remove the dashed focus ring */
+            entry, combobox, list, row, treeview, textview, scrolledwindow, iconview {
+               outline-width: 0px;
+            }
+
+            combobox window {
+                background-color: #000000;
+            }
+            
+            /* Target internal entry of combobox if present */
+            combobox entry {
+                background-color: #000000;
+                color: #ffffff;
+            }
+
+            /* Fix dropdown menus */
+            menuitem, modelbutton {
+                color: #ffffff;
+                background-color: #000000;
+            }
+            menuitem:hover, modelbutton:hover {
+                background-color: #222222;
+            }
+            
+            /* Scrollbars */
+            scrollbar slider {
+                background-color: #333333;
+            }
+            """
+            self.pitch_black_provider.load_from_data(css.encode("utf-8"))
+
+        # Revert dynamic switching: ensure button always has the right icon if needed, 
+        # or just rely on the static definition. 
+        # But we must ensure no leftover "list-add" if we switched previously.
+        if not enabled:
+             # Ensure we are back to symbolic if we were in pitch black
+             image = self.add_btn.get_image()
+             if isinstance(image, Gtk.Image):
+                  image.set_from_icon_name("list-add-symbolic", Gtk.IconSize.BUTTON)
+             else:
+                  self.add_btn.set_image(Gtk.Image.new_from_icon_name("list-add-symbolic", Gtk.IconSize.BUTTON))
+
+        screen = Gdk.Screen.get_default()
+        if enabled:
+            Gtk.StyleContext.add_provider_for_screen(
+                screen, self.pitch_black_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1
+            )
+        else:
+            Gtk.StyleContext.remove_provider_for_screen(
+                screen, self.pitch_black_provider
+            )

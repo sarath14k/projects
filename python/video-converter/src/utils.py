@@ -84,7 +84,8 @@ def load_static_css():
     from gi.repository import Gdk, Gtk
 
     css = """
-    .dim-label { opacity: 0.8; font-size: 10px; margin-bottom: 2px; font-weight: bolder; letter-spacing: 0.5px; }
+    label, entry, textview { font-family: "Inter", "Roboto", "Segoe UI", "Cantarell", "Ubuntu", sans-serif; }
+    .dim-label { opacity: 0.8; font-size: 11px; margin-bottom: 2px; font-weight: 600; letter-spacing: 0.5px; }
     .sidebar-bg { background-color: alpha(currentColor, 0.03); border-right: 1px solid alpha(currentColor, 0.1); }
     .row-card { border-radius: 12px; border: 1px solid alpha(currentColor, 0.08); background-color: alpha(currentColor, 0.03); padding: 8px; }
     .active-row .row-card { border: 1px solid #2ec27e; background-color: alpha(#2ec27e, 0.08); }
