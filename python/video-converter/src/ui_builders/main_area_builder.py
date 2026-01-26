@@ -72,7 +72,8 @@ def build_main_area(window):
         "video-x-generic-symbolic", Gtk.IconSize.DIALOG
     )
     icon.set_pixel_size(96)
-    icon.set_opacity(0.3)
+    icon.set_opacity(0.15)
+    icon.get_style_context().add_class("empty-icon")
     lbl = Gtk.Label()
     lbl.set_markup(
         "<span size='xx-large' weight='bold' foreground='#555555'>Drop Videos Here</span>"

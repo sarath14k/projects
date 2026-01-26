@@ -63,10 +63,24 @@ STANDARD_CSS = """
         background-color: #000000;
     }
 
+    .empty-icon {
+        background-color: transparent;
+        background-image: none;
+        border: none;
+        box-shadow: none;
+    }
+
     .drag-active {
         border: 2px dashed @accent_color;
         background-color: alpha(@accent_color, 0.1);
         border-radius: 16px;
+    }
+
+    .drag-active .empty-icon,
+    .drag-active image,
+    .drag-active box {
+        background-color: transparent;
+        background-image: none;
     }
 
     button {
@@ -244,5 +258,18 @@ PITCH_BLACK_CSS = """
     }
     progressbar trough {
         background-color: #222222;
+    }
+
+    .empty-icon,
+    .drag-active .empty-icon,
+    .drag-active image,
+    .drag-active box,
+    .drag-active label {
+        background-color: transparent;
+        background-image: none;
+    }
+
+    .drag-active {
+        background-color: alpha(#2ec27e, 0.05);
     }
 """
