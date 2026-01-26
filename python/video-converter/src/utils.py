@@ -5,7 +5,11 @@ import sys
 
 from gi.repository import GLib
 
+from concurrent.futures import ThreadPoolExecutor
 from .config import APP_NAME, CACHE_DIR
+
+
+THUMB_POOL = ThreadPoolExecutor(max_workers=4)
 
 
 def ui(fn, *args):

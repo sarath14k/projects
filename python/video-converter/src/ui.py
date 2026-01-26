@@ -13,194 +13,16 @@ from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango
 
 from .config import *
 from .engine import ProgressParser, build_ffmpeg_command
-from .utils import SleepInhibitor, load_static_css, ui
+from .utils import SleepInhibitor, load_static_css, ui, THUMB_POOL
+from .css import PITCH_BLACK_CSS
+from .components.file_row import FileRow
+from . import helpers
 
-THUMB_POOL = ThreadPoolExecutor(max_workers=4)
+from .managers.prefs_manager import PrefsManager
+from .managers.file_manager import FileManager
+from .managers.conversion_manager import ConversionManager
 
-
-class FileRow:
-    __slots__ = (
-        "path",
-        "id",
-        "root",
-        "label",
-        "remove_btn",
-        "play_btn",
-        "progress",
-        "info",
-        "conflict",
-        "thumb",
-        "log_btn",
-        "log_data",
-        "pulse_id",
-    )
-
-    def __init__(self, path_str, remove_cb, move_up_cb, move_down_cb):
-        self.path = Path(path_str)
-        self.id = path_str
-        self.log_data = []
-        self.pulse_id = None
-
-        frame = Gtk.Frame()
-        frame.get_style_context().add_class("row-card")
-        self.root = frame
-
-        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        hbox.set_border_width(8)
-        frame.add(hbox)
-
-        arrows_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        arrows_box.set_valign(Gtk.Align.CENTER)
-
-        up_btn = Gtk.Button.new_from_icon_name("go-up-symbolic", Gtk.IconSize.MENU)
-        up_btn.get_style_context().add_class("flat-button")
-        up_btn.connect("clicked", lambda _: move_up_cb(self.id))
-
-        down_btn = Gtk.Button.new_from_icon_name("go-down-symbolic", Gtk.IconSize.MENU)
-        down_btn.get_style_context().add_class("flat-button")
-        down_btn.connect("clicked", lambda _: move_down_cb(self.id))
-
-        arrows_box.pack_start(up_btn, False, False, 0)
-        arrows_box.pack_start(down_btn, False, False, 0)
-        hbox.pack_start(arrows_box, False, False, 0)
-
-        self.thumb = Gtk.Image.new_from_icon_name(
-            "video-x-generic-symbolic", Gtk.IconSize.DIALOG
-        )
-        self.thumb.set_pixel_size(48)
-        self.thumb.get_style_context().add_class("thumbnail")
-        self.thumb.set_size_request(96, 54)
-        hbox.pack_start(self.thumb, False, False, 0)
-
-        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        hbox.pack_start(content_box, True, True, 0)
-
-        top_line = Gtk.Box(spacing=6)
-        content_box.pack_start(top_line, False, False, 0)
-
-        self.label = Gtk.Label(xalign=0, label=self.path.name)
-        self.label.set_ellipsize(Pango.EllipsizeMode.MIDDLE)
-        top_line.pack_start(self.label, True, True, 0)
-
-        self.conflict = Gtk.Label()
-        self.conflict.set_no_show_all(True)
-        top_line.pack_start(self.conflict, False, False, 0)
-
-        self.info = Gtk.Label(xalign=0, label="Pending...")
-        self.info.set_use_markup(True)
-        self.info.get_style_context().add_class("dim-label")
-        content_box.pack_start(self.info, False, False, 0)
-
-        self.progress = Gtk.ProgressBar()
-        self.progress.set_hexpand(True)
-        content_box.pack_start(self.progress, False, False, 0)
-
-        action_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        action_box.set_valign(Gtk.Align.CENTER)
-
-        self.remove_btn = Gtk.Button.new_from_icon_name(
-            "user-trash-symbolic", Gtk.IconSize.BUTTON
-        )
-        self.remove_btn.get_style_context().add_class("row-remove-btn")
-        self.remove_btn.connect("clicked", lambda _: remove_cb(self.id))
-
-        self.play_btn = Gtk.Button.new_from_icon_name(
-            "media-playback-start-symbolic", Gtk.IconSize.BUTTON
-        )
-        self.play_btn.set_no_show_all(True)
-
-        self.log_btn = Gtk.Button.new_from_icon_name(
-            "dialog-warning-symbolic", Gtk.IconSize.BUTTON
-        )
-        self.log_btn.set_no_show_all(True)
-        self.log_btn.get_style_context().add_class("destructive-action")
-        self.log_btn.connect("clicked", self.show_log)
-
-        action_box.pack_start(self.play_btn, False, False, 0)
-        action_box.pack_start(self.log_btn, False, False, 0)
-        action_box.pack_start(self.remove_btn, False, False, 0)
-        hbox.pack_end(action_box, False, False, 0)
-
-        THUMB_POOL.submit(self._generate_thumb)
-
-    def show_log(self, btn):
-        dialog = Gtk.Dialog(title="FFmpeg Log", flags=0)
-        dialog.add_buttons("Copy", 1, "Clear", 2, "Close", Gtk.ResponseType.CLOSE)
-        dialog.set_default_size(700, 500)
-        box = dialog.get_content_area()
-        box.set_spacing(10)
-        box.set_border_width(10)
-        scrolled = Gtk.ScrolledWindow()
-        scrolled.set_hexpand(True)
-        scrolled.set_vexpand(True)
-        box.add(scrolled)
-        text_view = Gtk.TextView()
-        text_view.set_editable(False)
-        text_view.set_monospace(True)
-        text_view.get_buffer().set_text("\n".join(self.log_data))
-        scrolled.add(text_view)
-        dialog.show_all()
-        while True:
-            response = dialog.run()
-            if response == 1:
-                clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-                clipboard.set_text("\n".join(self.log_data), -1)
-            elif response == 2:
-                self.log_data.clear()
-                text_view.get_buffer().set_text("")
-            else:
-                break
-        dialog.destroy()
-
-    def _generate_thumb(self):
-        try:
-            thumb = CACHE_DIR / f"{abs(hash(str(self.path)))}.jpg"
-            if not thumb.exists():
-                subprocess.run(
-                    [
-                        "ffmpeg",
-                        "-ss",
-                        "5",
-                        "-i",
-                        str(self.path),
-                        "-vframes",
-                        "1",
-                        "-vf",
-                        "scale=192:-1",
-                        "-q:v",
-                        "5",
-                        str(thumb),
-                    ],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    check=True,
-                )
-            GLib.idle_add(self._set_thumb, str(thumb))
-        except:
-            pass
-
-    def _set_thumb(self, path):
-        try:
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 96, 54, True)
-            self.thumb.set_from_pixbuf(pixbuf)
-        except:
-            pass
-
-    def set_active(self, active):
-        ctx = self.root.get_style_context()
-        if active:
-            ctx.add_class("active-row")
-        else:
-            ctx.remove_class("active-row")
-
-    def show_conflict(self):
-        self.conflict.set_markup(
-            "<span foreground='#f39c12' weight='bold' size='small'>⚠ Overwrite</span>"
-        )
-        self.conflict.show()
-
-    def set_success(self):
-        self.progress.get_style_context().add_class("success-bar")
+from .ui_builders import header_builder, sidebar_builder, main_area_builder, theme_manager
 
 
 class VideoConverter(Gtk.Window):
@@ -210,57 +32,43 @@ class VideoConverter(Gtk.Window):
         GLib.set_prgname(APP_NAME)
 
         self.set_default_size(950, 650)
-        self.set_position(Gtk.WindowPosition.CENTER)
-        self.connect("delete-event", self.on_quit_attempt)
-        atexit.register(self.cleanup)
+        self.set_border_width(0)
 
-        self.config = ConfigManager.load()
-        self.files = []
-        self.processed_files = set()
-        self.rows = {}
-        self.file_info_cache = {}
-        self.proc = None
-        self.current_file = None
-        self.stop_requested = False
-        self.paused = False
-        self.last_output_dir = None
-        self.countdown_source_id = None
-        self.inhibitor = SleepInhibitor()
-        self.last_folder = self.config.get("last_folder", None)
         self.sidebar_visible = True
-        self.active_quality_map = QUALITY_MAP_GPU
+        self.files = {} # Keep compatibility if needed, but managers handle it
+        self.last_folder = str(Path.home())
+        self.rem_sec = 0
+        self.countdown_source_id = None
+        self.config = {} # Initialize config for _combo usage
 
         self._init_ui()
         self._init_shortcuts()
-        load_static_css()
-        self._update_empty_state()
-        self.on_codec_changed(self.codec)
-        
-        
-        # Load Theme Preference
-        # Map old "theme_mode" or "dark_mode" to pitch_black boolean
-        pitch_black = False
-        if "pitch_black" in self.config:
-            pitch_black = self.config.get("pitch_black")
-        elif "theme_mode" in self.config:
-            if self.config.get("theme_mode") == "pitch-black":
-                pitch_black = True
-            
-        self.theme_switch.set_active(pitch_black)
-        # Apply manually
-        self.on_theme_toggled(self.theme_switch, pitch_black)
 
-        # Load Icon
-        try:
-            # We assume icon is in the parent directory of 'src' or strictly relative
-            base_path = Path(__file__).parent.parent
-            icon_path = base_path / "video_converter.png"
-            if icon_path.exists():
-                self.set_icon_from_file(str(icon_path))
-            else:
-                self.set_icon_name("video-x-generic")
-        except:
-            pass
+        # Initialize managers AFTER UI is created
+        self.prefs_manager = PrefsManager(self)
+        self.file_manager = FileManager(self)
+        self.conversion_manager = ConversionManager(self)
+
+        self.drag_dest_set(
+            Gtk.DestDefaults.ALL, [], Gdk.DragAction.COPY
+        )
+        self.drag_dest_add_uri_targets()
+        self.connect("drag-motion", self.on_drag_motion)
+        self.connect("drag-leave", self.on_drag_leave)
+        self.connect("drag-data-received", self.on_drag_data_received)
+
+        # Load Preferences
+        self.prefs_manager.load_prefs()
+        self.connect("delete-event", self.on_quit_attempt)
+
+        self.show_all()
+        # Deferred UI restore and initial state update
+        self.prefs_manager.restore_ui_state()
+        self._update_empty_state()
+        
+        # Apply theme label
+        pitch = self.theme_switch.get_active()
+        self.theme_label.set_text("Dark" if pitch else "Light")
 
     def on_quit_attempt(self, widget, event):
         if self.proc:
@@ -281,238 +89,30 @@ class VideoConverter(Gtk.Window):
         return False
 
     def cleanup(self):
-        if self.proc:
-            try:
-                self.proc.terminate()
-                self.proc.wait(timeout=1)
-            except:
-                self.proc.kill()
-        self.inhibitor.stop()
+        self.prefs_manager.save_prefs()
         THUMB_POOL.shutdown(wait=False)
 
+
     def _get_render_devices(self):
-        devs = glob.glob("/dev/dri/renderD*")
-        devs.sort()
-        devices = []
-        for d in devs:
-            label = os.path.basename(d)
-            try:
-                u = subprocess.check_output(
-                    ["udevadm", "info", "-a", "-n", d], text=True
-                )
-                if "0x1002" in u:
-                    label = f"AMD ({label})"
-                elif "0x8086" in u:
-                    label = f"Intel ({label})"
-                elif "0x10de" in u:
-                    label = f"NVIDIA ({label})"
-            except:
-                pass
-            devices.append((d, label))
-        return devices if devices else [("", "No VAAPI Device")]
+        return helpers.get_render_devices()
 
     def _init_ui(self):
-        header = Gtk.HeaderBar()
-        header.set_show_close_button(True)
-        header.props.title = "Video Converter"
-        self.set_titlebar(header)
-
-        self.hamburger_btn = Gtk.Button.new_from_icon_name(
-            "open-menu-symbolic", Gtk.IconSize.MENU
-        )
-        self.hamburger_btn.connect(
-            "clicked", lambda _: self.toggle_sidebar(not self.sidebar_visible)
-        )
-        header.pack_start(self.hamburger_btn)
-
-        # Theme Switcher
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
-        box.set_valign(Gtk.Align.CENTER)
+        """Initialize the UI using modular builders."""
+        # Build header with theme switcher
+        header_builder.build_header(self)
         
-        icon = Gtk.Image.new_from_icon_name("preferences-desktop-theme-symbolic", Gtk.IconSize.MENU)
-        
-        self.theme_switch = Gtk.Switch()
-        self.theme_switch.set_valign(Gtk.Align.CENTER)
-        self.theme_switch.connect("state-set", self.on_theme_toggled)
-        
-        # Dynamic label: "Light" (Standard Dark) vs "Dark" (Pitch Black)
-        # Default to Light, will be updated by prefs loading immediately
-        self.theme_label = Gtk.Label(label="Light")
-        
-        box.pack_start(icon, False, False, 0)
-        box.pack_start(self.theme_label, False, False, 0)
-        box.pack_start(self.theme_switch, False, False, 0)
-        
-        header.pack_end(box)
-
+        # Create overlay and main container
         self.overlay = Gtk.Overlay()
         self.add(self.overlay)
-
-        main_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.overlay.add(main_hbox)
-
-        self.sidebar_revealer = Gtk.Revealer()
-        self.sidebar_revealer.set_transition_type(
-            Gtk.RevealerTransitionType.SLIDE_RIGHT
-        )
-        self.sidebar_revealer.set_transition_duration(250)
-        self.sidebar_revealer.set_reveal_child(True)
-        main_hbox.pack_start(self.sidebar_revealer, False, False, 0)
-
-        sidebar_frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        sidebar_frame.set_size_request(200, -1)
-        sidebar_frame.get_style_context().add_class("sidebar-bg")
-        self.sidebar_revealer.add(sidebar_frame)
-
-        header_box = Gtk.Box(spacing=10)
-        header_box.set_border_width(12)
-        app_title = Gtk.Label(xalign=0)
-        app_title.set_markup("<span weight='heavy' size='large'>Configuration</span>")
-        header_box.pack_start(app_title, True, True, 0)
-        sidebar_frame.pack_start(header_box, False, False, 0)
-
-        side_scroll = Gtk.ScrolledWindow()
-        side_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        sidebar_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        sidebar_content.set_border_width(15)
-        side_scroll.add(sidebar_content)
-        sidebar_frame.pack_start(side_scroll, True, True, 0)
-
-        self.gpu_device = Gtk.ComboBoxText()
-        for path, label in self._get_render_devices():
-            self.gpu_device.append(path, label)
-        self.gpu_device.set_active(0)
-        self._add_field(sidebar_content, "GPU Device", self.gpu_device)
-
-        self.codec = self._combo(list(CODECS.keys()), "codec", 0)
-        self.codec.connect("changed", self.on_codec_changed)
-        self._add_field(sidebar_content, "Codec", self.codec)
-
-        self.quality = Gtk.ComboBoxText()
-        self._add_field(sidebar_content, "Quality / Preset", self.quality)
-
-        self.scale_chk = Gtk.Switch()
-        self.scale_chk.set_active(True)
-        self.scale_chk.set_halign(Gtk.Align.START)
-        self._add_field(sidebar_content, "Limit to 1080p", self.scale_chk)
-
-        self.after_action = self._combo(AFTER_ACTIONS, "after_action", 0)
-        self._add_field(sidebar_content, "Handling", self.after_action)
-        self.auto_close = self._combo(AUTO_CLOSE_MAP, "auto_close", 0)
-        self._add_field(sidebar_content, "Auto Close", self.auto_close)
-        self.after_complete = self._combo(AFTER_COMPLETE, "after_complete", 0)
-        self._add_field(sidebar_content, "Completion", self.after_complete)
-
-        right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        main_hbox.pack_start(right_box, True, True, 0)
-
-        top_controls = Gtk.Box(spacing=10)
-        top_controls.set_border_width(12)
-        top_controls.set_margin_bottom(0)
-        right_box.pack_start(top_controls, False, False, 0)
-
-        self.open_out_btn = Gtk.Button.new_from_icon_name(
-            "folder-open-symbolic", Gtk.IconSize.BUTTON
-        )
-        self.open_out_btn.set_sensitive(False)
-        self.open_out_btn.set_tooltip_text("Open Output Folder")
-        self.open_out_btn.connect("clicked", self.open_output_folder)
-        top_controls.pack_start(self.open_out_btn, False, False, 0)
-
-        self.add_btn = Gtk.Button.new_from_icon_name(
-            "list-add-symbolic", Gtk.IconSize.BUTTON
-        )
-        self.add_btn.get_style_context().add_class("suggested-action")
-        self.add_btn.set_tooltip_text("Add Videos")
-        self.add_btn.connect("clicked", self.pick_files)
-        top_controls.pack_start(self.add_btn, False, False, 0)
-
-        clear_btn = Gtk.Button.new_from_icon_name(
-            "edit-clear-all-symbolic", Gtk.IconSize.BUTTON
-        )
-        clear_btn.set_tooltip_text("Clear List")
-        clear_btn.connect("clicked", self.clear_all)
-        top_controls.pack_end(clear_btn, False, False, 0)
-
-        right_box.pack_start(
-            Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0
-        )
-
-        self.stack = Gtk.Stack()
-        self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-        right_box.pack_start(self.stack, True, True, 0)
-
-        self.empty_state = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        self.empty_state.set_valign(Gtk.Align.CENTER)
-        self.empty_state.set_halign(Gtk.Align.CENTER)
-        icon = Gtk.Image.new_from_icon_name(
-            "video-x-generic-symbolic", Gtk.IconSize.DIALOG
-        )
-        icon.set_pixel_size(96)
-        icon.set_opacity(0.3)
-        lbl = Gtk.Label()
-        lbl.set_markup(
-            "<span size='xx-large' weight='bold' foreground='#555555'>Drop Videos Here</span>"
-        )
-        self.empty_state.pack_start(icon, False, False, 0)
-        self.empty_state.pack_start(lbl, False, False, 0)
-        self.stack.add_named(self.empty_state, "empty")
-
-        list_scroll = Gtk.ScrolledWindow()
-        list_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        self.listbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        self.listbox.set_border_width(12)
-        list_scroll.add(self.listbox)
-        self.stack.add_named(list_scroll, "list")
-
-        self.drag_dest_set(Gtk.DestDefaults.ALL, [], Gdk.DragAction.COPY)
-        self.drag_dest_add_uri_targets()
-        self.connect("drag-data-received", self.on_drag_data_received)
-        self.connect("drag-motion", self.on_drag_motion)
-        self.connect("drag-leave", self.on_drag_leave)
-
-        controls_area = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        controls_area.get_style_context().add_class("bottom-bar")
-        controls_area.set_border_width(12)
-        right_box.pack_end(controls_area, False, False, 0)
-        right_box.pack_end(
-            Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0
-        )
-
-        self.queue_status = Gtk.Label(label="Ready.")
-        self.queue_status.set_use_markup(True)
-        self.queue_status.set_justify(Gtk.Justification.LEFT)
-        self.queue_status.set_xalign(0)
-        self.queue_status.set_ellipsize(Pango.EllipsizeMode.END)
-        self.queue_status.set_max_width_chars(30)
-        controls_area.pack_start(self.queue_status, True, True, 0)
-
-        self.start_btn = Gtk.Button.new_from_icon_name(
-            "media-playback-start-symbolic", Gtk.IconSize.BUTTON
-        )
-        self.start_btn.get_style_context().add_class("suggested-action")
-        self.start_btn.set_tooltip_text("Start Queue")
-        self.start_btn.set_valign(Gtk.Align.CENTER)
-        self.start_btn.connect("clicked", self.start)
-        controls_area.pack_end(self.start_btn, False, False, 0)
-
-        self.pause_btn = Gtk.Button.new_from_icon_name(
-            "media-playback-pause-symbolic", Gtk.IconSize.BUTTON
-        )
-        self.pause_btn.set_sensitive(False)
-        self.pause_btn.set_tooltip_text("Pause")
-        self.pause_btn.set_valign(Gtk.Align.CENTER)
-        self.pause_btn.connect("clicked", self.pause_resume)
-        controls_area.pack_end(self.pause_btn, False, False, 0)
-
-        stop_btn = Gtk.Button.new_from_icon_name(
-            "media-playback-stop-symbolic", Gtk.IconSize.BUTTON
-        )
-        stop_btn.get_style_context().add_class("destructive-action")
-        stop_btn.set_tooltip_text("Stop Queue")
-        stop_btn.set_valign(Gtk.Align.CENTER)
-        stop_btn.connect("clicked", self.stop)
-        controls_area.pack_end(stop_btn, False, False, 0)
+        
+        self.main_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.overlay.add(self.main_hbox)
+        
+        # Build sidebar with configuration options
+        sidebar_builder.build_sidebar(self)
+        
+        # Build main area with file list and controls
+        main_area_builder.build_main_area(self)
 
     def _init_shortcuts(self):
         self.connect("key-press-event", self.on_key_press)
@@ -580,38 +180,9 @@ class VideoConverter(Gtk.Window):
                 self.quality.set_active(i)
                 break
 
-    def _filesize(self, path):
-        try:
-            return os.path.getsize(path)
-        except:
-            return 0
-
-    def _human_size(self, size_bytes):
-        for unit in ["B", "KB", "MB", "GB", "TB"]:
-            if size_bytes < 1024.0:
-                return f"{size_bytes:.1f}{unit}"
-            size_bytes /= 1024.0
-        return f"{size_bytes:.1f}PB"
-
-    def _open_folder_safe(self, path):
-        if not path or not os.path.exists(path):
-            return
-        managers = ["dolphin", "thunar", "nautilus", "nemo", "pcmanfm", "caja"]
-        for fm in managers:
-            if shutil.which(fm):
-                subprocess.Popen([fm, path])
-                return
-        subprocess.Popen(["xdg-open", path])
-
     def open_output_folder(self, _):
         if self.last_output_dir:
-            self._open_folder_safe(self.last_output_dir)
-
-    def send_notification(self, title, body):
-        try:
-            subprocess.run(["notify-send", "-a", APP_NAME, title, body])
-        except:
-            pass
+            helpers.open_folder_safe(self.last_output_dir)
 
     def on_drag_motion(self, widget, context, x, y, time):
         self.stack.get_style_context().add_class("drag-active")
@@ -640,44 +211,11 @@ class VideoConverter(Gtk.Window):
             except:
                 continue
         if paths:
-            self.add_files(paths)
+            self.file_manager.add_files(paths)
         Gtk.drag_finish(drag_context, True, False, time)
 
-    def add_files(self, paths):
-        for f in paths:
-            if f not in self.rows:
-                self.files.append(f)
-                row = FileRow(f, self.remove_file, self.move_row_up, self.move_row_down)
-                self.rows[f] = row
-                self.listbox.pack_start(row.root, False, False, 0)
-        self.show_all()
-        self._update_empty_state()
+    # File ops moved to FileManager
 
-    def move_row_up(self, file_id):
-        try:
-            idx = self.files.index(file_id)
-            if idx > 0:
-                self.files[idx], self.files[idx - 1] = (
-                    self.files[idx - 1],
-                    self.files[idx],
-                )
-                row = self.rows[file_id].root
-                self.listbox.reorder_child(row, idx - 1)
-        except ValueError:
-            pass
-
-    def move_row_down(self, file_id):
-        try:
-            idx = self.files.index(file_id)
-            if idx < len(self.files) - 1:
-                self.files[idx], self.files[idx + 1] = (
-                    self.files[idx + 1],
-                    self.files[idx],
-                )
-                row = self.rows[file_id].root
-                self.listbox.reorder_child(row, idx + 1)
-        except ValueError:
-            pass
 
     def pick_files(self, _):
         dlg = Gtk.FileChooserDialog(
@@ -695,57 +233,11 @@ class VideoConverter(Gtk.Window):
         if dlg.run() == Gtk.ResponseType.OK:
             self.last_folder = dlg.get_current_folder()
             ConfigManager.save(self._gather_prefs())
-            self.add_files([x.get_path() for x in dlg.get_files()])
+            self.file_manager.add_files([x.get_path() for x in dlg.get_files()])
         dlg.destroy()
 
-    def remove_file(self, path):
-        if path == self.current_file and self.proc:
-            return
-        if path in self.files:
-            self.files.remove(path)
-        if path in self.file_info_cache:
-            del self.file_info_cache[path]
-        if path in self.rows:
-            self.listbox.remove(self.rows.pop(path).root)
-        self._update_empty_state()
+    # Actions moved to ConversionManager / FileManager
 
-    def clear_all(self, _):
-        if self.proc:
-            return
-        for f in list(self.files):
-            self.remove_file(f)
-
-    def start(self, _):
-        if not self.files or self.proc:
-            return
-        ConfigManager.save(self._gather_prefs())
-        self.pause_btn.set_sensitive(True)
-        self.open_out_btn.set_sensitive(True)
-        self.stop_requested = False
-        threading.Thread(target=self.encode_all, daemon=True).start()
-
-    def pause_resume(self, _):
-        if self.proc:
-            self.proc.send_signal(signal.SIGCONT if self.paused else signal.SIGSTOP)
-            self.paused = not self.paused
-            icon_name = (
-                "media-playback-start-symbolic"
-                if self.paused
-                else "media-playback-pause-symbolic"
-            )
-            self.pause_btn.set_image(
-                Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.BUTTON)
-            )
-            self.pause_btn.set_tooltip_text("Resume" if self.paused else "Pause")
-
-    def stop(self, _):
-        self.stop_requested = True
-        if self.countdown_source_id:
-            GLib.source_remove(self.countdown_source_id)
-            self.countdown_source_id = None
-            self.queue_status.set_text("⚠ Canceled.")
-        if self.proc:
-            self.proc.send_signal(signal.SIGTERM)
 
     def _get_out_path(self, src):
         val = self.active_quality_map.get(self.quality.get_active_text(), 26)
@@ -768,225 +260,22 @@ class VideoConverter(Gtk.Window):
         row.progress.set_fraction(pct)
         markup = (
             f"<span size='large'><b>{int(pct * 100)}%</b> • <span foreground='#2ec27e'><b>{fps:.0f} fps</b></span> • <span foreground='#62a0ea'>x{speed:.1f}</span> • "
-            f"<span foreground='#ffb74d'><b>ETA: {self.fmt_time(rem)}</b></span></span>\n"
+            f"<span foreground='#ffb74d'><b>ETA: {helpers.format_time(rem)}</b></span></span>\n"
             f"<span size='medium' alpha='80%'>{init_size_str} ➝ <span foreground='#c061cb'>{est_size_str}</span></span>"
         )
         row.info.set_markup(markup)
         bitrate_str = f"{bitrate:.0f} kbps" if bitrate > 0 else "N/A"
         self.queue_status.set_markup(
-            f"<span size='medium' weight='bold' foreground='#ffb74d'>Queue ETA: {self.fmt_time(q_rem)}</span>\n"
+            f"<span size='medium' weight='bold' foreground='#ffb74d'>Queue ETA: {helpers.format_time(q_rem)}</span>\n"
             f"<span size='medium' weight='bold' foreground='#2ec27e'>Bitrate: {bitrate_str}</span>"
         )
 
     def get_file_info(self, f):
-        try:
-            cmd = [
-                "ffprobe",
-                "-v",
-                "error",
-                "-select_streams",
-                "v:0",
-                "-show_entries",
-                "format=duration,bit_rate:stream=r_frame_rate,codec_name,width",
-                "-of",
-                "json",
-                f,
-            ]
-            out = subprocess.check_output(cmd, timeout=2, text=True)
-            data = json.loads(out)
+        return helpers.get_video_info(f)
 
-            dur = float(data["format"].get("duration", 1.0))
-            src_bitrate = float(data["format"].get("bit_rate", 5_000_000))
+    # Encoding moved to ConversionManager
 
-            fps_str = data["streams"][0].get("r_frame_rate", "30/1")
-            fps = (
-                float(fps_str.split("/")[0]) / float(fps_str.split("/")[1])
-                if "/" in fps_str
-                else float(fps_str)
-            )
-            codec = data["streams"][0].get("codec_name", "unknown")
 
-            width = int(data["streams"][0].get("width", 1920))
-            return dur, fps, codec, src_bitrate, width
-        except:
-            return 1.0, 30.0, "unknown", 5_000_000, 1920
-
-    def encode_all(self):
-        self.inhibitor.start()
-        for f in self.files:
-            if os.path.exists(self._get_out_path(f)):
-                ui(self.rows[f].show_conflict)
-            if f not in self.file_info_cache:
-                self.file_info_cache[f] = self.get_file_info(f)
-
-        while True:
-            if self.stop_requested:
-                break
-            next_file = None
-            future_sec = 0
-            for f in self.files:
-                if f not in self.processed_files:
-                    if next_file is None:
-                        next_file = f
-                    else:
-                        future_sec += self.file_info_cache.get(f, (0, 0, 0, 0, 0))[0]
-            if next_file is None:
-                break
-            self.current_file = next_file
-            for r in self.rows.values():
-                ui(r.set_active, False)
-            ui(self.rows[next_file].set_active, True)
-
-            if self.encode_file(next_file, future_sec) and not self.stop_requested:
-                self._handle_source_action(next_file)
-                self.processed_files.add(next_file)
-            else:
-                if self.stop_requested:
-                    break
-                self.processed_files.add(next_file)
-
-        self.inhibitor.stop()
-        self.current_file = None
-        self.processed_files.clear()
-        ui(
-            lambda: (
-                self.queue_status.set_markup(
-                    f"<span size='x-large' weight='bold' foreground='#{'ff5555' if self.stop_requested else '2ec27e'}'>{'⚠ Batch Canceled' if self.stop_requested else '✔ Queue Completed'}</span>"
-                ),
-                self.pause_btn.set_sensitive(False),
-            )
-        )
-        if not self.stop_requested:
-            self._handle_completion()
-
-    def encode_file(self, file, future_sec=0):
-        row = self.rows[file]
-        row.log_data.clear()
-        ui(lambda: row.info.set_text("Initializing..."))
-        row.pulse_id = None
-
-        def _pulse():
-            row.progress.pulse()
-            return True
-
-        GLib.idle_add(lambda: setattr(row, "pulse_id", GLib.timeout_add(100, _pulse)))
-
-        dur, src_fps, input_codec, src_bitrate, width = self.file_info_cache.get(
-            file, (1.0, 30.0, "unknown", 5_000_000, 1920)
-        )
-        out = self._get_out_path(file)
-        codec_key = self.codec.get_active_text()
-        if codec_key not in CODECS:
-            codec_key = list(CODECS.keys())[0]
-        device_path = self.gpu_device.get_active_id()
-        if not device_path:
-            device_path = "/dev/dri/renderD128"
-        val = self.active_quality_map.get(self.quality.get_active_text(), 26)
-        multiplier = BITRATE_MULTIPLIER_MAP.get(val, 0.5)
-        target_k = max(int(src_bitrate * multiplier), 300_000)
-        maxrate_k = max(int(target_k * 1.5), 600_000)
-
-        cmd = build_ffmpeg_command(
-            file,
-            out,
-            CODECS[codec_key],
-            val,
-            device_path,
-            width,
-            input_codec,
-            target_k,
-            maxrate_k,
-            self.scale_chk.get_active(),
-        )
-
-        ui(self.queue_status.set_text, f"Processing: {os.path.basename(file)}...")
-        init_size = self._filesize(file)
-        init_size_str = self._human_size(init_size)
-        parser = ProgressParser(dur, src_fps)
-
-        try:
-            self.proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                stdin=subprocess.DEVNULL,
-                text=True,
-                bufsize=1,
-            )
-            while self.proc.poll() is None:
-                line = self.proc.stderr.readline()
-                if not line:
-                    continue
-                row.log_data.append(line.strip())
-                if len(row.log_data) > 300:
-                    row.log_data.pop(0)
-                stats = parser.parse(line)
-                if stats:
-                    pct, fps, speed, bitrate, rem = stats
-                    q_rem = rem + (future_sec / max(speed, 0.001))
-                    est_size_str = "?"
-                    if bitrate > 0:
-                        est_size_str = self._human_size((bitrate * 1000 / 8) * dur)
-                    GLib.idle_add(
-                        self._update_row_ui,
-                        row,
-                        pct,
-                        fps,
-                        speed,
-                        bitrate,
-                        rem,
-                        q_rem,
-                        init_size_str,
-                        est_size_str,
-                    )
-            return_code = self.proc.returncode
-        except Exception as e:
-            row.log_data.append(str(e))
-            return_code = 1
-
-        def cleanup_pulse():
-            if hasattr(row, "pulse_id") and row.pulse_id is not None:
-                GLib.source_remove(row.pulse_id)
-                row.pulse_id = None
-
-        GLib.idle_add(cleanup_pulse)
-
-        self.proc = None
-        if return_code == 0:
-            saved = (
-                (1 - self._filesize(out) / self._filesize(file)) * 100
-                if self._filesize(file)
-                else 0
-            )
-            markup = (
-                f"<span foreground='#2ec27e'><b>✔ COMPLETED</b></span>\n"
-                f"<span size='small' alpha='60%'>Saved {saved:.0f}%  •  {self._human_size(self._filesize(out))}</span>"
-            )
-            GLib.idle_add(
-                lambda: (
-                    row.set_active(False),
-                    row.set_success(),
-                    row.progress.set_fraction(1.0),
-                    row.info.set_markup(markup),
-                    row.play_btn.connect(
-                        "clicked", lambda _: subprocess.Popen(["xdg-open", out])
-                    ),
-                    row.play_btn.show(),
-                )
-            )
-            return True
-        else:
-            GLib.idle_add(
-                lambda: (
-                    row.set_active(False),
-                    row.progress.set_fraction(0.0),
-                    row.info.set_markup(
-                        "<span foreground='#e74c3c' weight='bold'>✖ ERROR</span>"
-                    ),
-                    row.log_btn.show(),
-                )
-            )
-            return False
 
     def _handle_source_action(self, path):
         idx = self.after_action.get_active()
@@ -996,10 +285,10 @@ class VideoConverter(Gtk.Window):
             elif idx == 2:
                 os.remove(path)
         except Exception as e:
-            self.send_notification("Error", f"Failed to remove source: {e}")
+            helpers.send_notification("Error", f"Failed to remove source: {e}")
 
     def _handle_completion(self):
-        self.send_notification("Conversion Complete", "All tasks finished.")
+        helpers.send_notification("Conversion Complete", "All tasks finished.")
         if self.after_complete.get_active() == 1:
             self.start_countdown(
                 60, "Shutdown in", lambda: subprocess.run(["systemctl", "poweroff"])
@@ -1025,189 +314,13 @@ class VideoConverter(Gtk.Window):
 
         self.countdown_source_id = GLib.timeout_add(1000, _tick)
 
-    def fmt_time(self, sec):
-        m, s = divmod(int(sec), 60)
-        h, m = divmod(m, 60)
-        return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
-    def _gather_prefs(self):
-        return {
-            "codec": self.codec.get_active(),
-            "quality": self.quality.get_active(),
-            "auto_close": self.auto_close.get_active(),
-            "after_action": self.after_action.get_active(),
-            "after_complete": self.after_complete.get_active(),
-            "last_folder": self.last_folder,
-            "gpu_device": self.gpu_device.get_active(),
-            "pitch_black": self.theme_switch.get_active(),
-        }
+
 
     def on_theme_toggled(self, switch, state):
-        settings = Gtk.Settings.get_default()
-        
-        # Always prefer dark theme (no more light mode)
-        settings.set_property("gtk-application-prefer-dark-theme", True)
-        settings.set_property("gtk-theme-name", "Adwaita-dark")
-
-        # Apply pitch black override if enabled
-        self._update_pitch_black_css(state)
-        
-        # Update label text
-        if hasattr(self, 'theme_label'):
-             self.theme_label.set_text("Dark" if state else "Light")
-        
-        return False
-        
-        # Force redraw to apply custom CSS correctly if needed
-        self.queue_draw()
+        """Delegate to theme manager."""
+        return theme_manager.on_theme_toggled(self, switch, state)
 
     def _update_pitch_black_css(self, enabled):
-        if not hasattr(self, "pitch_black_provider"):
-            self.pitch_black_provider = Gtk.CssProvider()
-            css = """
-            @define-color theme_bg_color #000000;
-            @define-color theme_base_color #000000;
-            @define-color theme_fg_color #ffffff;
-            @define-color window_bg_color #000000;
-            @define-color window_fg_color #ffffff;
-            
-            window, .background, headerbar, list, treeview, textview, eventbox, scrolledwindow, viewport, box {
-                background-color: #000000;
-                background-image: none;
-                border-color: #333333;
-            }
-            
-            .sidebar-bg { background-color: #000000; border-right: 1px solid #333333; }
-            /* Remove border from standard buttons if requested or make it pitch black */
-            button:not(.suggested-action):not(.destructive-action):not(.flat-button) {
-                background-color: #000000;
-                background-image: none;
-                border: 1px solid #222222; 
-                border-radius: 4px;
-                box-shadow: none;
-                text-shadow: none;
-                color: #ffffff;
-            }
-            
-            button:not(.suggested-action):not(.destructive-action):not(.flat-button):hover {
-                background-color: #111111;
-                border-color: #444444;
-            }
-            button:not(.suggested-action):not(.destructive-action):not(.flat-button):active {
-                background-color: #222222;
-            }
-            
-            /* Explicitly preserve/fix suggested action */
-            /* Explicitly preserve/fix suggested action */
-            .suggested-action {
-                background-color: #2ec27e;
-                color: #000000;
-                border: none;
-                border-radius: 4px;
-                background-image: none;
-                box-shadow: none;
-                text-shadow: none;
-                -gtk-icon-shadow: none;
-            }
-            .suggested-action image, .suggested-action box {
-                background-color: transparent;
-                background-image: none;
-                color: inherit;
-            }
-            .suggested-action:hover { background-color: #3ad68e; }
-
-            /* Explicitly preserve/fix destructive action */
-            .destructive-action {
-                background-color: #e74c3c;
-                color: #ffffff;
-                border: none;
-                border-radius: 4px;
-                background-image: none;
-                box-shadow: none;
-                text-shadow: none;
-                -gtk-icon-shadow: none;
-            }
-            .destructive-action image, .destructive-action box {
-                background-color: transparent;
-                background-image: none;
-                color: inherit;
-            }
-            .destructive-action:hover { background-color: #ff6b6b; }
-
-            entry, combobox, spinbutton, treeview, textview, popover, menu, menubar, toolbar {
-                background-color: #000000;
-                color: #ffffff;
-                border: none;
-                border-radius: 0;
-                box-shadow: none;
-                outline-width: 0px;
-                outline: none;
-                -gtk-outline-radius: 0;
-            }
-
-            /* Deep targeting for combobox internals */
-            combobox *, 
-            combobox button, 
-            combobox button.combo,
-            combobox > box.linked > button.combo {
-               background-color: #000000;
-               background-image: none;
-               border: none;
-               border-image: none;
-               border-radius: 0;
-               box-shadow: none;
-               outline: none;
-               text-shadow: none;
-            }
-            
-            /* Remove the dashed focus ring */
-            entry, combobox, list, row, treeview, textview, scrolledwindow, iconview {
-               outline-width: 0px;
-            }
-
-            combobox window {
-                background-color: #000000;
-            }
-            
-            /* Target internal entry of combobox if present */
-            combobox entry {
-                background-color: #000000;
-                color: #ffffff;
-            }
-
-            /* Fix dropdown menus */
-            menuitem, modelbutton {
-                color: #ffffff;
-                background-color: #000000;
-            }
-            menuitem:hover, modelbutton:hover {
-                background-color: #222222;
-            }
-            
-            /* Scrollbars */
-            scrollbar slider {
-                background-color: #333333;
-            }
-            """
-            self.pitch_black_provider.load_from_data(css.encode("utf-8"))
-
-        # Revert dynamic switching: ensure button always has the right icon if needed, 
-        # or just rely on the static definition. 
-        # But we must ensure no leftover "list-add" if we switched previously.
-        if not enabled:
-             # Ensure we are back to symbolic if we were in pitch black
-             image = self.add_btn.get_image()
-             if isinstance(image, Gtk.Image):
-                  image.set_from_icon_name("list-add-symbolic", Gtk.IconSize.BUTTON)
-             else:
-                  self.add_btn.set_image(Gtk.Image.new_from_icon_name("list-add-symbolic", Gtk.IconSize.BUTTON))
-
-        screen = Gdk.Screen.get_default()
-        if enabled:
-            Gtk.StyleContext.add_provider_for_screen(
-                screen, self.pitch_black_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1
-            )
-        else:
-            Gtk.StyleContext.remove_provider_for_screen(
-                screen, self.pitch_black_provider
-            )
+        """Delegate to theme manager."""
+        theme_manager.update_pitch_black_css(self, enabled)
