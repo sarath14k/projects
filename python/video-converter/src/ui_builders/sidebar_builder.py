@@ -23,13 +23,13 @@ def build_sidebar(window):
     main_hbox.pack_start(window.sidebar_revealer, False, False, 0)
 
     sidebar_frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-    sidebar_frame.set_size_request(200, -1)
+    sidebar_frame.set_size_request(240, -1)
     sidebar_frame.get_style_context().add_class("sidebar-bg")
     window.sidebar_revealer.add(sidebar_frame)
 
     # Header
-    header_box = Gtk.Box(spacing=10)
-    header_box.set_border_width(12)
+    header_box = Gtk.Box(spacing=16)
+    header_box.set_border_width(20)
     app_title = Gtk.Label(xalign=0)
     app_title.set_markup("<span weight='heavy' size='large'>Configuration</span>")
     header_box.pack_start(app_title, True, True, 0)
@@ -38,8 +38,8 @@ def build_sidebar(window):
     # Scrollable content
     side_scroll = Gtk.ScrolledWindow()
     side_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-    sidebar_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-    sidebar_content.set_border_width(15)
+    sidebar_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+    sidebar_content.set_border_width(20)
     side_scroll.add(sidebar_content)
     sidebar_frame.pack_start(side_scroll, True, True, 0)
 

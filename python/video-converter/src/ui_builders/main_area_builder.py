@@ -17,11 +17,11 @@ def build_main_area(window):
     main_hbox.pack_start(right_box, True, True, 0)
 
     # Top controls
-    top_controls = Gtk.Box(spacing=10)
-    top_controls.set_border_width(12)
+    top_controls = Gtk.Box(spacing=16)
+    top_controls.set_border_width(20)
     top_controls.set_margin_bottom(0)
     right_box.pack_start(top_controls, False, False, 0)
-
+    
     # Open output folder button
     window.open_out_btn = Gtk.Button.new_from_icon_name(
         "folder-open-symbolic", Gtk.IconSize.BUTTON
@@ -98,9 +98,9 @@ def build_main_area(window):
     window.stack.add_named(list_scroll, "list")
 
     # Bottom controls
-    controls_area = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+    controls_area = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
     controls_area.get_style_context().add_class("bottom-bar")
-    controls_area.set_border_width(12)
+    controls_area.set_border_width(20)
     right_box.pack_end(controls_area, False, False, 0)
     right_box.pack_end(
         Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0

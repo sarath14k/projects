@@ -88,30 +88,148 @@ def load_static_css():
     from gi.repository import Gdk, Gtk
 
     css = """
-    label, entry, textview { font-family: "Inter", "Roboto", "Segoe UI", "Cantarell", "Ubuntu", sans-serif; }
-    .dim-label { opacity: 0.8; font-size: 11px; margin-bottom: 2px; font-weight: 600; letter-spacing: 0.5px; }
-    .sidebar-bg { background-color: alpha(currentColor, 0.03); border-right: 1px solid alpha(currentColor, 0.1); }
-    .row-card { border-radius: 12px; border: 1px solid alpha(currentColor, 0.08); background-color: alpha(currentColor, 0.03); padding: 8px; }
+    @define-color bg_color #242424;
+    @define-color fg_color #eeeeee;
+    @define-color card_bg #323232;
+    @define-color accent_color #2ec27e;
+    @define-color accent_hover #3ad68e;
+    @define-color destructive_color #e74c3c;
+    @define-color destructive_hover #ff6b6b;
+
+    * {
+        font-family: "Inter", "Roboto", "Segoe UI", "Cantarell", "Ubuntu", sans-serif;
+    }
+
+    window, textview, .background {
+        background-color: @bg_color;
+        color: @fg_color;
+    }
+
+    .dim-label { 
+        opacity: 0.6; 
+        font-size: 11px; 
+        margin-bottom: 2px; 
+        font-weight: 600; 
+        letter-spacing: 0.5px; 
+    }
+
+    .sidebar-bg { 
+        background-color: alpha(#000000, 0.1); 
+        border-right: 1px solid alpha(#ffffff, 0.05); 
+    }
+
+    .row-card { 
+        border-radius: 16px; 
+        border: 1px solid alpha(#ffffff, 0.05); 
+        background-color: @card_bg; 
+        padding: 12px; 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .row-card:hover { 
+        background-color: shade(@card_bg, 1.05); 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        transition: all 0.2s ease; 
+    }
+
     .file-list { background: transparent; }
-    .file-list row { padding-bottom: 8px; background: transparent; }
+    .file-list row { 
+        padding-bottom: 12px; 
+        background: transparent; 
+        margin-left: 4px;
+        margin-right: 4px;
+    }
     .file-list row:last-child { padding-bottom: 0; }
     .file-list row:hover { background: transparent; }
-    .active-row .row-card { border: 1px solid #2ec27e; background-color: alpha(#2ec27e, 0.08); }
-    .thumbnail { border-radius: 8px; background-color: #000000; }
-    .drag-active { border: 2px dashed #2ec27e; background-color: alpha(#2ec27e, 0.1); }
-    .destructive-action { background-image: none; background-color: #e74c3c; color: white; }
-    .flat-button { min-height: 24px; min-width: 24px; padding: 0px; margin: 0px; border: none; background: transparent; box-shadow: none; color: alpha(currentColor, 0.5); }
-    .flat-button:hover { background-color: alpha(currentColor, 0.1); color: #2ec27e; }
-    .flat-button:active { background-color: alpha(currentColor, 0.2); }
-    .suggested-action { background-image: none; background-color: #2ec27e; color: #000000; font-weight: bold; border: none; border-radius: 4px; padding: 4px 8px; }
+
+    .active-row .row-card { 
+        border: 1px solid @accent_color; 
+        background-color: alpha(@accent_color, 0.08); 
+    }
+
+    .thumbnail { 
+        border-radius: 8px; 
+        background-color: #000000; 
+    }
+
+    .drag-active { 
+        border: 2px dashed @accent_color; 
+        background-color: alpha(@accent_color, 0.1); 
+        border-radius: 16px;
+    }
+
+    button {
+        min-height: 38px;
+        min-width: 38px;
+        padding: 0 12px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: background-color 0.15s ease;
+    }
+
+    .destructive-action { 
+        background-image: none; 
+        background-color: @destructive_color; 
+        color: white; 
+        border: none;
+        min-height: 38px;
+        min-width: 38px;
+    }
+    .destructive-action:hover { background-color: @destructive_hover; }
+
+    .flat-button { 
+        min-height: 28px; 
+        min-width: 28px; 
+        padding: 4px; 
+        margin: 0px; 
+        border: none; 
+        background: transparent; 
+        box-shadow: none; 
+        color: alpha(@fg_color, 0.6); 
+        border-radius: 50%;
+    }
+    .flat-button:hover { 
+        background-color: alpha(@fg_color, 0.1); 
+        color: @accent_color; 
+    }
+    .flat-button:active { background-color: alpha(@fg_color, 0.2); }
+
+    .suggested-action { 
+        background-image: none; 
+        background-color: @accent_color; 
+        color: #000000; 
+        font-weight: 700; 
+        border: none; 
+        border-radius: 8px; 
+        padding: 0 12px; 
+        min-height: 38px;
+        min-width: 38px;
+    }
     .suggested-action label { background-color: transparent; color: inherit; }
-    .suggested-action:hover { background-color: #3ad68e; }
-    .suggested-action:disabled { background-color: alpha(currentColor, 0.1); color: alpha(currentColor, 0.5); }
-    .row-card:hover { background-color: alpha(currentColor, 0.08); transition: background-color 0.2s ease; }
-    .row-remove-btn:hover { color: #ff5555; background-color: alpha(#ff5555, 0.1); border-radius: 4px; }
-    progressbar trough { min-height: 8px; border-radius: 4px; background-color: alpha(currentColor, 0.1); }
-    progressbar progress { min-height: 8px; border-radius: 4px; }
-    .success-bar progress { background-color: #2ec27e; }
+    .suggested-action:hover { background-color: @accent_hover; }
+    .suggested-action:disabled { 
+        background-color: alpha(@fg_color, 0.1); 
+        color: alpha(@fg_color, 0.4); 
+    }
+
+    .row-remove-btn { color: alpha(@fg_color, 0.5); }
+    .row-remove-btn:hover { 
+        color: @destructive_hover; 
+        background-color: alpha(@destructive_color, 0.15); 
+        border-radius: 50%; 
+    }
+
+    progressbar trough { 
+        min-height: 6px; 
+        border-radius: 3px; 
+        background-color: alpha(#000000, 0.3); 
+    }
+    progressbar progress { 
+        min-height: 6px; 
+        border-radius: 3px; 
+        background-color: @accent_color;
+    }
+    .success-bar progress { background-color: @accent_color; }
     """
     p = Gtk.CssProvider()
     p.load_from_data(css.encode("utf-8"))
