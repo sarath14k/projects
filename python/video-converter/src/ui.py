@@ -1,8 +1,4 @@
-import atexit
-import glob
-import json
 import os
-import shutil
 import signal
 import subprocess
 import threading
@@ -13,17 +9,16 @@ from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango
 
 from .config import *
 from .engine import ProgressParser, build_ffmpeg_command
-from .utils import SleepInhibitor, load_static_css, ui, THUMB_POOL
+from .utils import SleepInhibitor, ui, THUMB_POOL
 from .css import PITCH_BLACK_CSS
 from .components.file_row import FileRow
-from . import helpers
+from . import utils
 
 from .managers.prefs_manager import PrefsManager
 from .managers.file_manager import FileManager
 from .managers.conversion_manager import ConversionManager
 
 from .ui_builders import header_builder, sidebar_builder, main_area_builder, theme_manager
-
 
 class VideoConverter(Gtk.Window):
     def __init__(self):
@@ -68,7 +63,7 @@ class VideoConverter(Gtk.Window):
         # Deferred UI restore and initial state update
         self.prefs_manager.restore_ui_state()
         self._update_empty_state()
-        
+
         # Apply theme label
         pitch = self.theme_switch.get_active()
         self.theme_label.set_text("Black" if pitch else "Gray")
@@ -95,26 +90,23 @@ class VideoConverter(Gtk.Window):
         self.prefs_manager.save_prefs()
         THUMB_POOL.shutdown(wait=False)
 
-
-    def _get_render_devices(self):
-        return helpers.get_render_devices()
-
     def _init_ui(self):
         """Initialize the UI using modular builders."""
+        # Load standard theme first
+        theme_manager.load_standard_css()
+
         # Build header with theme switcher
         header_builder.build_header(self)
-        
+
         # Create overlay and main container
         self.overlay = Gtk.Overlay()
         self.add(self.overlay)
-        
+
         self.main_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.overlay.add(self.main_hbox)
-        
+
         # Build sidebar with configuration options
         sidebar_builder.build_sidebar(self)
-        
-        # Build main area with file list and controls
         main_area_builder.build_main_area(self)
 
     def _init_shortcuts(self):
@@ -187,7 +179,7 @@ class VideoConverter(Gtk.Window):
 
     def open_output_folder(self, _):
         if self.last_output_dir:
-            helpers.open_folder_safe(self.last_output_dir)
+            utils.open_folder_safe(self.last_output_dir)
 
     def on_drag_motion(self, widget, context, x, y, time):
         self.stack.get_style_context().add_class("drag-active")
@@ -199,29 +191,8 @@ class VideoConverter(Gtk.Window):
 
     def on_drag_data_received(self, widget, drag_context, x, y, data, info, time):
         self.stack.get_style_context().remove_class("drag-active")
-        uris = data.get_uris()
-        paths = []
-        for uri in uris:
-            try:
-                path_str, _ = GLib.filename_from_uri(uri)
-                path = Path(path_str)
-                if path.is_file() and path.suffix.lower() in VIDEO_EXTS:
-                    paths.append(str(path))
-                elif path.is_dir():
-                    for root, _, files in os.walk(path):
-                        for name in files:
-                            sub_path = Path(root) / name
-                            if sub_path.suffix.lower() in VIDEO_EXTS:
-                                paths.append(str(sub_path))
-            except Exception as e:
-                print(f"Error processing drag URI {uri}: {e}")
-                continue
-        if paths:
-            self.file_manager.add_files(paths)
+        self.file_manager.process_dropped_data(data)
         Gtk.drag_finish(drag_context, True, False, time)
-
-    # File ops moved to FileManager
-
 
     def pick_files(self, _):
         dlg = Gtk.FileChooserDialog(
@@ -241,47 +212,6 @@ class VideoConverter(Gtk.Window):
             self.file_manager.add_files(dlg.get_filenames())
         dlg.destroy()
 
-    # Actions moved to ConversionManager / FileManager
-
-
-    def _get_out_path(self, src):
-        val = self.active_quality_map.get(self.quality.get_active_text(), 26)
-        suffix = f"preset{val}" if val < 13 else f"qvbr{val}"
-        src_dir = os.path.dirname(src)
-        out_dir = src_dir
-        if sum(1 for f in self.files if os.path.dirname(f) == src_dir) > 1:
-            out_dir = os.path.join(src_dir, OUTPUT_DIR_NAME)
-            os.makedirs(out_dir, exist_ok=True)
-        self.last_output_dir = out_dir
-        return str(Path(out_dir) / f"{Path(src).stem}_comp_{suffix}.mkv")
-
-    def _update_row_ui(
-        self, row, pct, fps, speed, bitrate, rem, q_rem, init_size_str, est_size_str
-    ):
-        if hasattr(row, "pulse_id") and row.pulse_id:
-            GLib.source_remove(row.pulse_id)
-            row.pulse_id = None
-
-        row.progress.set_fraction(pct)
-        markup = (
-            f"<span size='large'><b>{int(pct * 100)}%</b> • <span foreground='#2ec27e'><b>{fps:.0f} fps</b></span> • <span foreground='#62a0ea'>x{speed:.1f}</span> • "
-            f"<span foreground='#ffb74d'><b>ETA: {helpers.format_time(rem)}</b></span></span>\n"
-            f"<span size='medium' alpha='80%'>{init_size_str} ➝ <span foreground='#c061cb'>{est_size_str}</span></span>"
-        )
-        row.info.set_markup(markup)
-        bitrate_str = f"{bitrate:.0f} kbps" if bitrate > 0 else "N/A"
-        self.queue_status.set_markup(
-            f"<span size='medium' weight='bold' foreground='#ffb74d'>Queue ETA: {helpers.format_time(q_rem)}</span>\n"
-            f"<span size='medium' weight='bold' foreground='#2ec27e'>Bitrate: {bitrate_str}</span>"
-        )
-
-    def get_file_info(self, f):
-        return helpers.get_video_info(f)
-
-    # Encoding moved to ConversionManager
-
-
-
     def _handle_source_action(self, path):
         idx = self.after_action.get_active()
         try:
@@ -290,10 +220,10 @@ class VideoConverter(Gtk.Window):
             elif idx == 2:
                 os.remove(path)
         except Exception as e:
-            helpers.send_notification("Error", f"Failed to remove source: {e}")
+            utils.send_notification("Error", f"Failed to remove source: {e}")
 
     def _handle_completion(self):
-        helpers.send_notification("Conversion Complete", "All tasks finished.")
+        utils.send_notification("Conversion Complete", "All tasks finished.")
         if self.after_complete.get_active() == 1:
             self.start_countdown(
                 60, "Shutdown in", lambda: subprocess.run(["systemctl", "poweroff"])
@@ -318,9 +248,6 @@ class VideoConverter(Gtk.Window):
             return False
 
         self.countdown_source_id = GLib.timeout_add(1000, _tick)
-
-
-
 
     def on_theme_toggled(self, switch, state):
         """Delegate to theme manager."""

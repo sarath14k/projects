@@ -3,16 +3,15 @@
 from gi.repository import Gtk, Gdk, Pango
 from ..config import VIDEO_EXTS
 
-
 def build_main_area(window):
     """Build the main file list area with controls.
-    
+
     Args:
         window: The main VideoConverter window instance
     """
     # Get main_hbox from window
     main_hbox = window.main_hbox
-    
+
     right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
     main_hbox.pack_start(right_box, True, True, 0)
 
@@ -21,7 +20,7 @@ def build_main_area(window):
     top_controls.set_border_width(20)
     top_controls.set_margin_bottom(0)
     right_box.pack_start(top_controls, False, False, 0)
-    
+
     # Open output folder button
     window.open_out_btn = Gtk.Button.new_from_icon_name(
         "folder-open-symbolic", Gtk.IconSize.BUTTON
@@ -77,11 +76,11 @@ def build_main_area(window):
     # File list
     list_scroll = Gtk.ScrolledWindow()
     list_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-    
+
     window.file_list_box = Gtk.ListBox()
     window.file_list_box.set_selection_mode(Gtk.SelectionMode.NONE)
     window.file_list_box.get_style_context().add_class("file-list")
-    
+
     # Drag-and-drop for reordering AND adding files
     window.file_list_box.drag_dest_set(
         Gtk.DestDefaults.ALL,
@@ -93,7 +92,7 @@ def build_main_area(window):
     )
     window.file_list_box.connect("drag-motion", lambda *a: window.file_manager.on_drag_motion(*a))
     window.file_list_box.connect("drag-data-received", lambda *a: window.file_manager.on_drag_data_received(*a))
-    
+
     list_scroll.add(window.file_list_box)
     window.stack.add_named(list_scroll, "list")
 

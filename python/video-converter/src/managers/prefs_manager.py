@@ -55,7 +55,7 @@ class PrefsManager:
         elif "theme_mode" in self.config:
             if self.config.get("theme_mode") == "pitch-black":
                 pitch_black = True
-            
+
         self.window.theme_switch.set_active(pitch_black)
         # Apply manually
         self.window.on_theme_toggled(self.window.theme_switch, pitch_black)

@@ -3,16 +3,15 @@
 from gi.repository import Gtk
 from ..config import CODECS, AFTER_ACTIONS, AUTO_CLOSE_MAP, AFTER_COMPLETE
 
-
 def build_sidebar(window):
     """Build the configuration sidebar with all options.
-    
+
     Args:
         window: The main VideoConverter window instance
     """
     # Get main_hbox from window (should be created before calling this)
     main_hbox = window.main_hbox
-    
+
     # Sidebar revealer
     window.sidebar_revealer = Gtk.Revealer()
     window.sidebar_revealer.set_transition_type(
@@ -44,8 +43,9 @@ def build_sidebar(window):
     sidebar_frame.pack_start(side_scroll, True, True, 0)
 
     # GPU Device
+    from .. import utils
     window.gpu_device = Gtk.ComboBoxText()
-    for path, label in window._get_render_devices():
+    for path, label in utils.get_render_devices():
         window.gpu_device.append(path, label)
     window.gpu_device.set_active(0)
     window._add_field(sidebar_content, "GPU Device", window.gpu_device)
@@ -68,14 +68,14 @@ def build_sidebar(window):
     # After action
     window.after_action = window._combo(AFTER_ACTIONS, "after_action", 0)
     window._add_field(sidebar_content, "Handling", window.after_action)
-    
+
     # Auto close
     window.auto_close = window._combo(AUTO_CLOSE_MAP, "auto_close", 0)
     window._add_field(sidebar_content, "Auto Close", window.auto_close)
-    
+
     # After complete
     window.after_complete = window._combo(AFTER_COMPLETE, "after_complete", 0)
     window._add_field(sidebar_content, "Completion", window.after_complete)
-    
+
     # Trigger codec change to populate quality dropdown
     window.on_codec_changed(window.codec)

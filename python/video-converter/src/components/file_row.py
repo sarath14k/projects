@@ -5,7 +5,6 @@ from pathlib import Path
 from gi.repository import Gtk, GdkPixbuf, Pango, GLib, Gdk
 from ..config import *
 from ..utils import ui, THUMB_POOL
-from ..engine import build_ffmpeg_command, ProgressParser
 
 class FileRow:
     __slots__ = (
@@ -56,7 +55,7 @@ class FileRow:
         )
         eb.connect("drag-begin", self.on_drag_begin)
         eb.connect("drag-data-get", self.on_drag_data_get)
-        
+
         # Cursor feedback for the whole row
         eb.connect("enter-notify-event", self._on_handle_enter)
         eb.connect("leave-notify-event", self._on_handle_leave)
@@ -107,25 +106,25 @@ class FileRow:
         # Action buttons on the right (vertically stacked)
         action_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         action_box.set_valign(Gtk.Align.CENTER)
-        
+
         # Play button
         self.play_btn = Gtk.Button.new_from_icon_name("media-playback-start-symbolic", Gtk.IconSize.BUTTON)
         self.play_btn.set_no_show_all(True)
         self.play_btn.set_visible(False)
         self.play_btn.connect("clicked", self._on_play)
-        
+
         # Log button
         self.log_btn = Gtk.Button.new_from_icon_name("dialog-warning-symbolic", Gtk.IconSize.BUTTON)
         self.log_btn.set_no_show_all(True)
         self.log_btn.set_visible(False)
         self.log_btn.get_style_context().add_class("destructive-action")
         self.log_btn.connect("clicked", self.show_log)
-        
+
         # Remove button
         self.remove_btn = Gtk.Button.new_from_icon_name("user-trash-symbolic", Gtk.IconSize.BUTTON)
         self.remove_btn.get_style_context().add_class("row-remove-btn")
         self.remove_btn.connect("clicked", lambda _: remove_cb(self.id))
-        
+
         action_box.pack_start(self.play_btn, False, False, 0)
         action_box.pack_start(self.log_btn, False, False, 0)
         action_box.pack_start(self.remove_btn, False, False, 0)
@@ -137,7 +136,7 @@ class FileRow:
         dialog = Gtk.Dialog(title="FFmpeg Log", flags=0)
         dialog.add_buttons("Copy", 1, "Clear", 2, "Close", Gtk.ResponseType.CLOSE)
         dialog.set_default_size(700, 500)
-        
+
         box = dialog.get_content_area()
         box.set_spacing(10)
         box.set_border_width(10)
@@ -145,14 +144,14 @@ class FileRow:
         scrolled.set_hexpand(True)
         scrolled.set_vexpand(True)
         box.add(scrolled)
-        
+
         text_view = Gtk.TextView()
         text_view.set_editable(False)
         text_view.set_monospace(True)
         log_text = "\n".join(self.log_data) if isinstance(self.log_data, list) else str(self.log_data)
         text_view.get_buffer().set_text(log_text)
         scrolled.add(text_view)
-        
+
         dialog.show_all()
         while True:
             response = dialog.run()
@@ -174,8 +173,8 @@ class FileRow:
     def _generate_thumb(self):
         try:
             # Fetch duration
-            from .. import helpers
-            info = helpers.get_video_info(str(self.path))
+            from .. import utils
+            info = utils.get_video_info(str(self.path))
             self.duration = info[0]
 
             # Match original naming
@@ -188,7 +187,7 @@ class FileRow:
                     "-vframes", "1", "-vf", "scale=192:-1",
                     "-q:v", "5", str(thumb_path)
                 ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                
+
                 # Fallback: if 5s seek failed (short video), try 0s
                 if not thumb_path.exists():
                     subprocess.run([
@@ -196,7 +195,7 @@ class FileRow:
                         "-vframes", "1", "-vf", "scale=192:-1",
                         "-q:v", "5", str(thumb_path)
                     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            
+
             if thumb_path.exists():
                 ui(self._set_thumb, str(thumb_path))
         except:
@@ -242,11 +241,11 @@ class FileRow:
         icon_box = Gtk.Box(spacing=10)
         icon_box.set_border_width(6)
         icon_box.get_style_context().add_class("row-card")
-        
+
         lbl = Gtk.Label(label=os.path.basename(str(self.path)))
         icon_box.add(lbl)
         icon_box.show_all()
-        
+
         Gtk.drag_set_icon_widget(context, icon_box, 0, 0)
 
     def on_drag_data_get(self, widget, context, data, info, time):
@@ -263,3 +262,17 @@ class FileRow:
         window = widget.get_window()
         if window:
             window.set_cursor(None)
+
+    def update_progress(self, pct, fps, speed, bitrate, rem, q_rem, init_size_str, est_size_str):
+        if self.pulse_id:
+            GLib.source_remove(self.pulse_id)
+            self.pulse_id = None
+
+        self.progress.set_fraction(pct)
+        from .. import utils
+        markup = (
+            f"<span size='large'><b>{int(pct * 100)}%</b> • <span foreground='#2ec27e'><b>{fps:.0f} fps</b></span> • <span foreground='#62a0ea'>x{speed:.1f}</span> • "
+            f"<span foreground='#ffb74d'><b>ETA: {utils.format_time(rem)}</b></span></span>\n"
+            f"<span size='medium' alpha='80%'>{init_size_str} ➝ <span foreground='#c061cb'>{est_size_str}</span></span>"
+        )
+        self.info.set_markup(markup)

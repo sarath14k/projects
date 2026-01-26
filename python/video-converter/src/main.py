@@ -3,14 +3,10 @@ import os
 import sys
 from pathlib import Path
 
-# ─── PATH FIX ───
-# Allow importing 'src' modules when running this script directly
-# We add the parent directory (video-converter/) to the system path
 current_dir = Path(__file__).resolve().parent
 root_dir = current_dir.parent
 sys.path.insert(0, str(root_dir))
 
-# ─── FORCE BACKEND ───
 os.environ["GDK_BACKEND"] = "wayland,x11"
 
 import gi
@@ -28,7 +24,6 @@ from gi.repository import Gtk
 
 from src.ui import VideoConverter
 
-# Now these imports will work correctly
 from src.utils import check_dependencies
 
 if __name__ == "__main__":

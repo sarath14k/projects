@@ -56,7 +56,6 @@ AUTO_CLOSE_MAP = {"Never": 0, "After 1 min": 60, "After 5 min": 300}
 AFTER_ACTIONS = ("Keep source", "Move to Trash", "Delete permanently")
 AFTER_COMPLETE = ("Do nothing", "Shutdown system")
 
-
 class ConfigManager:
     @staticmethod
     def load():

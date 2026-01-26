@@ -6,7 +6,7 @@ def build_ffmpeg_command(
 ):
     # Check if using CPU - either codec type is CPU OR device is "cpu"
     is_cpu = codec_conf["type"] == "cpu" or device_path == "cpu"
-    
+
     # Force CPU decoding ONLY for AV1 input when using GPU for encoding
     force_cpu_decode = (input_codec == "av1" and not is_cpu)
 
@@ -29,14 +29,14 @@ def build_ffmpeg_command(
             vf_chain.append("scale='min(1920,iw)':-2")
         vf_chain.append(f"format={codec_conf['fmt']}")
     else:
-        # ─── HARDWARE FILTERING ───
+
         if force_cpu_decode:
             # Decoded on CPU, upload to GPU for filtering/encoding
             if codec_conf['fmt'] == 'p010': # 10-bit
                 vf_chain.append("format=p010,hwupload")
             else: # 8-bit
                 vf_chain.append("format=nv12,hwupload")
-        
+
         if should_scale:
             vf_chain.append(f"scale_vaapi=w='min(1920,iw)':h=-2:format={codec_conf['fmt']}")
         else:
@@ -44,7 +44,7 @@ def build_ffmpeg_command(
 
     if vf_chain:
         cmd.extend(["-vf", ",".join(vf_chain)])
-    
+
     cmd.extend(["-c:v", codec_conf["name"] if not (device_path == "cpu" and codec_conf["type"] != "cpu") else "libx265"])
 
     if is_cpu:
@@ -101,7 +101,7 @@ class ProgressParser:
                     pct = min(frame / self.total_frames, 0.99) if self.total_frames > 0 else 0
 
                 fps = float(self.state.get("fps", 0))
-                
+
                 speed_str = self.state.get("speed", "0")
                 if "x" in speed_str and "N/A" not in speed_str:
                     speed = float(speed_str.replace("x", ""))
