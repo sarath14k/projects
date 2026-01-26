@@ -52,7 +52,7 @@ QUALITY_MAP_CPU = {
     "Preset 10 (Super Fast)": 10,
 }
 
-AUTO_CLOSE_MAP = {"Never": 0, "After 1 min": 60, "After 5 min": 300}
+AUTO_CLOSE_MAP = {"Never": 0, "30 seconds": 30, "1 minute": 60, "2 minutes": 120, "5 minutes": 300}
 AFTER_ACTIONS = ("Keep source", "Move to Trash", "Delete permanently")
 AFTER_COMPLETE = ("Do nothing", "Shutdown system")
 

@@ -39,6 +39,14 @@ def build_main_area(window):
     window.add_btn.connect("clicked", window.pick_files)
     top_controls.pack_start(window.add_btn, False, False, 0)
 
+    # Sort button (alphabetical)
+    sort_btn = Gtk.Button.new_from_icon_name(
+        "view-sort-ascending-symbolic", Gtk.IconSize.BUTTON
+    )
+    sort_btn.set_tooltip_text("Sort A-Z")
+    sort_btn.connect("clicked", lambda _: window.file_manager.sort_alphabetically())
+    top_controls.pack_start(sort_btn, False, False, 0)
+
     # Clear button
     clear_btn = Gtk.Button.new_from_icon_name(
         "edit-clear-all-symbolic", Gtk.IconSize.BUTTON

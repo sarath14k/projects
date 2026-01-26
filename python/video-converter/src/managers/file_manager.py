@@ -73,6 +73,22 @@ class FileManager:
         self.window.start_btn.set_sensitive(bool(self.files))
         self.window.open_out_btn.set_sensitive(bool(self.files))
 
+    def sort_alphabetically(self):
+        """Sort the queue alphabetically by filename."""
+        if not self.files:
+            return
+
+        # Get sorted list of file paths by filename
+        from pathlib import Path
+        sorted_paths = sorted(self.files.keys(), key=lambda p: Path(p).name.lower())
+
+        # Reorder rows in the listbox
+        for i, path in enumerate(sorted_paths):
+            row = self.files[path]
+            row_container = row.root.get_parent()
+            self.window.file_list_box.remove(row_container)
+            self.window.file_list_box.insert(row_container, i)
+
     def on_drag_motion(self, listbox, context, x, y, time):
         # Determine if we are dragging a row (reorder) or URIs (adding files)
         target = listbox.drag_dest_find_target(context, None)

@@ -233,14 +233,13 @@ class VideoConverter(Gtk.Window):
             self.start_countdown(sec, "Closing in", Gtk.main_quit)
 
     def start_countdown(self, seconds, prefix, callback):
+        self.cancel_countdown()  # Cancel any existing countdown first
         self.rem_sec = seconds
 
         def _tick():
-            if self.conversion_manager.stop_requested:
-                return False
             if self.rem_sec > 0:
                 self.queue_status.set_markup(
-                    f"<span size='x-large' weight='bold' foreground='#ffb74d'>{prefix} {self.rem_sec}s...</span>"
+                    f"<span size='x-large' weight='bold' foreground='#ffb74d'>{prefix} {self.rem_sec}s... (Stop to cancel)</span>"
                 )
                 self.rem_sec -= 1
                 return True
@@ -248,6 +247,13 @@ class VideoConverter(Gtk.Window):
             return False
 
         self.countdown_source_id = GLib.timeout_add(1000, _tick)
+
+    def cancel_countdown(self):
+        """Cancel any running countdown (auto-close/shutdown)."""
+        if self.countdown_source_id:
+            GLib.source_remove(self.countdown_source_id)
+            self.countdown_source_id = None
+            self.queue_status.set_markup("<span size='large' weight='bold' foreground='#2ec27e'>Countdown canceled.</span>")
 
     def on_theme_toggled(self, switch, state):
         """Delegate to theme manager."""

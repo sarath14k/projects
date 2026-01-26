@@ -56,6 +56,9 @@ class ConversionManager:
         self.window.pause_btn.set_sensitive(False)
         self.queue_status.set_text("Stopped")
 
+        # Cancel any running countdown (auto-close/shutdown)
+        self.window.cancel_countdown()
+
         # Re-enable buttons
         self.window.start_btn.set_visible(True)
         self.window.stop_btn.set_visible(False)
