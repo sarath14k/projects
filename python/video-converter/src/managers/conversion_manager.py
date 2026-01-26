@@ -109,6 +109,9 @@ class ConversionManager:
             ui(row.set_active, False)
             ui(row.set_reorder_locked, False)
             ui(row.remove_btn.set_sensitive, True)
+            
+            # Final UI cleanup for this file
+            ui(row.update_progress, 1.0, 0, 0, 0, 0, 0, "...", "...") # Ensure 100% and clean labels
             ui(row.set_success)
             ui(row.info.set_text, "Completed")
             ui(row.play_btn.set_visible, True)

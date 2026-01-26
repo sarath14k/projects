@@ -95,10 +95,10 @@ class ProgressParser:
                 raw_time = self.state.get("out_time_us", "0")
                 if raw_time != "N/A":
                     out_time_us = int(raw_time)
-                    pct = min(out_time_us / self.duration_us, 0.99) if self.duration_us > 0 else 0
+                    pct = min(out_time_us / self.duration_us, 1.0) if self.duration_us > 0 else 0
                 else:
                     frame = int(self.state.get("frame", 0))
-                    pct = min(frame / self.total_frames, 0.99) if self.total_frames > 0 else 0
+                    pct = min(frame / self.total_frames, 1.0) if self.total_frames > 0 else 0
 
                 fps = float(self.state.get("fps", 0))
 

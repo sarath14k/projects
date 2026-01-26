@@ -159,6 +159,12 @@ STANDARD_CSS = """
         min-height: 6px;
         border-radius: 3px;
         background-color: @accent_color;
+        background-image: none;
+        border: none;
+    }
+
+    .success-bar progress {
+        background-color: @accent_color;
     }
 
 """
@@ -271,5 +277,15 @@ PITCH_BLACK_CSS = """
 
     .drag-active {
         background-color: alpha(#2ec27e, 0.05);
+    }
+
+    progressbar progress {
+        background-color: @accent_color;
+        background-image: none;
+        border: none;
+    }
+
+    .success-bar progress {
+        background-color: @accent_color;
     }
 """
