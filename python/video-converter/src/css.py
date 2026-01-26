@@ -18,7 +18,7 @@ STANDARD_CSS = """
 
     .dim-label {
         opacity: 0.6;
-        font-size: 11px;
+        font-size: 10px;
         margin-bottom: 2px;
         font-weight: 600;
         letter-spacing: 0.5px;
@@ -31,17 +31,19 @@ STANDARD_CSS = """
     }
 
     .row-card {
-        border-radius: 16px;
+        border-radius: 6px;
         border: 1px solid alpha(#ffffff, 0.05);
         background-color: @card_bg;
-        padding: 16px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 18px;
+        margin-bottom: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
     }
 
     .row-card:hover {
-        background-color: shade(@card_bg, 1.08);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+        background-color: shade(@card_bg, 1.05);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        border-color: alpha(@ffffff, 0.1);
     }
 
     .file-list { background: transparent; }
@@ -60,16 +62,17 @@ STANDARD_CSS = """
     }
 
     .thumbnail {
-        border-radius: 12px;
+        border-radius: 6px;
         background-color: #000000;
-        border: 1px solid alpha(#ffffff, 0.1);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        border: 3px solid #222222;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.4);
     }
 
     .filename-label {
         font-weight: 800;
-        font-size: 14px;
+        font-size: 13px;
         color: @fg_color;
+        margin-top: 4px;
     }
 
     .empty-icon {
@@ -93,9 +96,9 @@ STANDARD_CSS = """
     }
 
     button {
-        min-height: 38px;
-        min-width: 38px;
-        padding: 0 12px;
+        min-height: 34px;
+        min-width: 34px;
+        padding: 0 8px;
         border-radius: 8px;
         font-weight: 500;
         transition: background-color 0.15s ease;
@@ -106,9 +109,9 @@ STANDARD_CSS = """
         background-color: @destructive_color;
         color: white;
         border: none;
-        min-height: 38px;
-        min-width: 38px;
-        padding: 0 12px;
+        min-height: 34px;
+        min-width: 34px;
+        padding: 0 8px;
     }
     .destructive-action image, .destructive-action box {
         background-color: transparent;
@@ -141,9 +144,9 @@ STANDARD_CSS = """
         font-weight: 700;
         border: none;
         border-radius: 8px;
-        padding: 0 12px;
-        min-height: 38px;
-        min-width: 38px;
+        padding: 0 8px;
+        min-height: 34px;
+        min-width: 34px;
     }
     .suggested-action label { background-color: transparent; color: inherit; }
     .suggested-action:hover { background-color: @accent_hover; }
@@ -152,11 +155,18 @@ STANDARD_CSS = """
         color: alpha(@fg_color, 0.4);
     }
 
-    .row-remove-btn { color: alpha(@fg_color, 0.5); }
+    .row-remove-btn {
+        color: alpha(@fg_color, 0.5);
+        margin-right: 12px;
+    }
     .row-remove-btn:hover {
         color: @destructive_hover;
         background-color: alpha(@destructive_color, 0.15);
         border-radius: 50%;
+    }
+
+    progressbar {
+        margin-bottom: 4px;
     }
 
     progressbar trough {
@@ -176,6 +186,9 @@ STANDARD_CSS = """
         background-color: @accent_color;
     }
 
+    /* Small Window Overrides */
+    .small-window .filename-label { font-size: 11px; }
+    .small-window .dim-label { font-size: 11px; }
 """
 
 PITCH_BLACK_CSS = """
@@ -202,23 +215,24 @@ PITCH_BLACK_CSS = """
 
     .row-card {
         background-color: @card_bg;
-        border: 1px solid #111111;
-        padding: 16px;
-        border-radius: 16px;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid #181818;
+        padding: 18px;
+        margin-bottom: 8px;
+        border-radius: 10px;
+        transition: all 0.2s ease;
     }
     .row-card:hover {
-        background-color: #0c0c0c;
-        border-color: #222222;
+        background-color: #121212;
+        border-color: #333333;
     }
     .active-row .row-card {
         border: 1px solid @accent_color;
-        background-color: alpha(@accent_color, 0.08);
+        background-color: alpha(@accent_color, 0.05);
     }
 
     .thumbnail {
-        border-radius: 12px;
-        border: 1px solid #222222;
+        border-radius: 6px;
+        border: 3px solid #333333;
     }
 
     button:not(.suggested-action):not(.destructive-action):not(.flat-button) {
@@ -294,6 +308,10 @@ PITCH_BLACK_CSS = """
         background-image: none;
     }
 
+    .row-remove-btn {
+        margin-right: 12px;
+    }
+
     .drag-active {
         background-color: alpha(#2ec27e, 0.05);
     }
@@ -305,6 +323,11 @@ PITCH_BLACK_CSS = """
     }
 
     .success-bar progress {
+
         background-color: @accent_color;
     }
+
+    /* Small Window Overrides */
+    .small-window .filename-label { font-size: 12px; }
+    .small-window .dim-label { font-size: 12px; }
 """

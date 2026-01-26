@@ -58,6 +58,7 @@ class VideoConverter(Gtk.Window):
         # Load Preferences
         self.prefs_manager.load_prefs()
         self.connect("delete-event", self.on_quit_attempt)
+        self.connect("configure-event", self.on_configure)
 
         self.show_all()
         # Deferred UI restore and initial state update
@@ -89,6 +90,17 @@ class VideoConverter(Gtk.Window):
     def cleanup(self):
         self.prefs_manager.save_prefs()
         THUMB_POOL.shutdown(wait=False)
+
+    def on_configure(self, widget, event):
+        """Handle window resize to toggle responsive styles."""
+        ctx = self.get_style_context()
+        if event.width < 700:
+            if not ctx.has_class("small-window"):
+                ctx.add_class("small-window")
+        else:
+            if ctx.has_class("small-window"):
+                ctx.remove_class("small-window")
+        return False
 
     def _init_ui(self):
         """Initialize the UI using modular builders."""

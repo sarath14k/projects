@@ -84,6 +84,9 @@ class FileRow:
         fname = os.path.basename(path_str)
         self.label = Gtk.Label(label=fname, xalign=0)
         self.label.set_ellipsize(Pango.EllipsizeMode.MIDDLE)
+        self.label.set_lines(2)
+        self.label.set_line_wrap(True)
+        self.label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
         self.label.set_width_chars(1) # Allow shrinking to min
         self.label.get_style_context().add_class("filename-label")
         top_line.pack_start(self.label, True, True, 0)
@@ -108,7 +111,7 @@ class FileRow:
         content_box.pack_start(self.progress, False, False, 0)
 
         # Action buttons on the right (horizontally stacked)
-        action_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        action_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         action_box.set_valign(Gtk.Align.CENTER)
 
         # Play button
