@@ -2,7 +2,7 @@ import time
 import subprocess
 
 def build_ffmpeg_command(
-    file, out, codec_conf, val, device_path, width, input_codec, target_bitrate, max_bitrate, limit_1080p
+    file, out, codec_conf, val, device_path, width, input_codec, target_bitrate, max_bitrate, limit_1080p, compression_level=4
 ):
     # Check if using CPU - either codec type is CPU OR device is "cpu"
     is_cpu = codec_conf["type"] == "cpu" or device_path == "cpu"
@@ -10,10 +10,10 @@ def build_ffmpeg_command(
     # Force CPU decoding ONLY for AV1 input when using GPU for encoding
     force_cpu_decode = (input_codec == "av1" and not is_cpu)
 
-    cmd = ["ffmpeg", "-y", "-progress", "pipe:2", "-hide_banner", "-loglevel", "warning"]
+    cmd = ["ffmpeg", "-y", "-threads", "0", "-progress", "pipe:2", "-hide_banner", "-loglevel", "warning"]
 
     if not is_cpu:
-        # Initialize VAAPI device
+        # Initialize VAAPI device with optimized thread queue
         cmd.extend(["-init_hw_device", f"vaapi=va:{device_path}", "-filter_hw_device", "va"])
         if not force_cpu_decode:
             # Restore hardware accelerated decoding for maximum performance
@@ -51,10 +51,11 @@ def build_ffmpeg_command(
         # Use CRF for CPU encoding
         cmd.extend(["-crf", "26", "-preset", "medium"])
         if codec_conf["name"] == "libsvtav1":
-            cmd.extend(["-svtav1-params", "lp=6:lookahead=32:scd=0"])
+            # Speed optimizations for SVT-AV1
+            cmd.extend(["-svtav1-params", "lp=8:lookahead=20:scd=1:tune=0"])
     else:
-        # Restore QVBR mode for optimized GPU encoding performance
-        cmd.extend(["-compression_level", "1"])
+        # Balanced compression for better speed/quality tradeoff
+        cmd.extend(["-compression_level", str(compression_level), "-async_depth", "4"])
         buf_size = max_bitrate * 2
         cmd.extend([
             "-rc_mode", "QVBR",

@@ -42,14 +42,21 @@ QUALITY_MAP_GPU = {
 
 BITRATE_MULTIPLIER_MAP = {17: 0.95, 20: 0.8, 23: 0.65, 27: 0.45, 32: 0.3}
 
+COMPRESSION_LEVELS = {
+    "Level 1 (Ultra)": 1,
+    "Level 2 (High)": 2,
+    "Level 3 (Main)": 3,
+    "Level 4 (Lite)": 4,
+}
+
 QUALITY_MAP_CPU = {
-    "Preset 4 (Best Size)": 4,
-    "Preset 5 (Very Slow)": 5,
-    "Preset 6 (Balanced)": 6,
-    "Preset 7 (Faster)": 7,
+    "Preset 4 (Best)": 4,
+    "Preset 5 (High)": 5,
+    "Preset 6 (Lite)": 6,
+    "Preset 7 (Tiny)": 7,
     "Preset 8 (Fast)": 8,
-    "Preset 9 (Very Fast)": 9,
-    "Preset 10 (Super Fast)": 10,
+    "Preset 9 (quick)": 9,
+    "Preset 10 (Instant)": 10,
 }
 
 AUTO_CLOSE_MAP = {"Never": 0, "30 seconds": 30, "1 minute": 60, "2 minutes": 120, "5 minutes": 300}

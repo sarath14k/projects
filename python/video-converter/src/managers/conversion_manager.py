@@ -132,6 +132,8 @@ class ConversionManager:
             params["quality"] = self.window.active_quality_map.get(self.window.quality.get_active_text(), 23)
             params["gpu"] = self.window.gpu_device.get_active_id()
             params["scale"] = self.window.scale_chk.get_active()
+            from ..config import COMPRESSION_LEVELS
+            params["compression_level"] = COMPRESSION_LEVELS.get(self.window.compression_level.get_active_text(), 4)
             done.set()
 
         GLib.idle_add(get_params)
@@ -170,7 +172,8 @@ class ConversionManager:
             input_codec,
             target_bitrate,
             max_bitrate,
-            params["scale"]
+            params["scale"],
+            params["compression_level"]
         )
 
         parser = ProgressParser(duration, fps)

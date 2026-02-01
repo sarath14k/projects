@@ -1,7 +1,7 @@
 """Sidebar builder for configuration options."""
 
 from gi.repository import Gtk
-from ..config import CODECS, AFTER_ACTIONS, AUTO_CLOSE_MAP, AFTER_COMPLETE
+from ..config import CODECS, AFTER_ACTIONS, AUTO_CLOSE_MAP, AFTER_COMPLETE, COMPRESSION_LEVELS
 
 def build_sidebar(window):
     """Build the configuration sidebar with all options.
@@ -58,6 +58,10 @@ def build_sidebar(window):
     # Quality
     window.quality = Gtk.ComboBoxText()
     window._add_field(sidebar_content, "Quality / Preset", window.quality)
+
+    # Hardware Compression Level
+    window.compression_level = window._combo(list(COMPRESSION_LEVELS.keys()), "compression_level", 3)
+    window._add_field(sidebar_content, "HW Encoding Speed", window.compression_level)
 
     # Scale checkbox
     window.scale_chk = Gtk.Switch()
