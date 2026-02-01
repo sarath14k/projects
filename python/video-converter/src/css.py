@@ -150,19 +150,33 @@ STANDARD_CSS = """
 """
 
 PITCH_BLACK_CSS = """
+    /* Color Palette - Pitch Black Theme */
     @define-color bg_color #000000;
     @define-color fg_color #ffffff;
     @define-color card_bg #080808;
+    @define-color accent_color #2ec27e;
+    @define-color accent_hover #3ad68e;
+    @define-color destructive_color #e74c3c;
+    @define-color destructive_hover #ff6b6b;
+    @define-color warning_color #f39c12;
+    @define-color warning_hover #e67e22;
+    @define-color success_color #27ae60;
+    @define-color info_color #3498db;
+    @define-color border_color #333333;
+    @define-color shadow_color rgba(0, 0, 0, 0.5);
 
     * {
         -gtk-icon-style: symbolic;
+        font-family: "Inter", "Roboto", "Segoe UI", "Cantarell", "Ubuntu", sans-serif;
+        box-sizing: border-box;
     }
 
     window, .background, headerbar, list, treeview, textview, eventbox, scrolledwindow, viewport, box {
         background-color: @bg_color;
         background-image: none;
-        border-color: #333333;
+        border-color: @border_color;
         color: @fg_color;
+        transition: background-color 0.2s ease;
     }
 
     .sidebar-bg {
@@ -172,10 +186,42 @@ PITCH_BLACK_CSS = """
 
     .row-card {
         background-color: @card_bg;
-        border: none;
+        border: 1px solid @border_color;
+        border-radius: 16px;
+        padding: 12px;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
     }
+    
     .row-card:hover {
         background-color: #111111;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px @shadow_color;
+    }
+    
+    .row-card:active {
+        transform: translateY(0);
+    }
+    
+    .row-card.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+    
+    .row-card.error {
+        border-color: @destructive_color;
+        background-color: alpha(@destructive_color, 0.05);
+    }
+    
+    .row-card.warning {
+        border-color: @warning_color;
+        background-color: alpha(@warning_color, 0.05);
+    }
+    
+    .row-card.success {
+        border-color: @success_color;
+        background-color: alpha(@success_color, 0.05);
     }
     .active-row .row-card {
         border: 1px solid @accent_color;
@@ -198,12 +244,12 @@ PITCH_BLACK_CSS = """
     }
 
     .suggested-action {
-        background-color: #2ec27e;
+        background-color: @accent_color;
         color: #000000;
         border: none;
     }
     .suggested-action:hover {
-        background-color: #3ad68e;
+        background-color: @accent_hover;
     }
 
     button image, button box, button > * {
@@ -247,9 +293,11 @@ PITCH_BLACK_CSS = """
     }
 
     .drag-active {
-        border: none;
-        background-color: alpha(#2ec27e, 0.08);
+        border: 2px solid @accent_color;
+        background-color: alpha(@accent_color, 0.08);
+        border-radius: 16px;
     }
+    
     .drag-active box,
     .drag-active image,
     .drag-active label,

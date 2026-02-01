@@ -129,7 +129,7 @@ class ConversionManager:
             codec_key = self.window.codec.get_active_text()
             from ..config import CODECS, BITRATE_MULTIPLIER_MAP
             params["codec"] = CODECS[codec_key]
-            params["quality"] = self.window.active_quality_map.get(self.window.quality.get_active_text(), 26)
+            params["quality"] = self.window.active_quality_map.get(self.window.quality.get_active_text(), 23)
             params["gpu"] = self.window.gpu_device.get_active_id()
             params["scale"] = self.window.scale_chk.get_active()
             done.set()

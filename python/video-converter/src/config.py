@@ -33,14 +33,14 @@ CODECS = {
 }
 
 QUALITY_MAP_GPU = {
-    "Best - 90% (QV-18)": 18,
-    "High - 70% (QV-22)": 22,
-    "Main - 50% (QV-26)": 26,
-    "Lite - 30% (QV-30)": 30,
-    "Tiny - 20% (QV-34)": 34,
+    "Best - 95% (QV-17)": 17,
+    "High - 80% (QV-20)": 20,
+    "Main - 65% (QV-23)": 23,
+    "Lite - 45% (QV-27)": 27,
+    "Tiny - 30% (QV-32)": 32,
 }
 
-BITRATE_MULTIPLIER_MAP = {18: 0.9, 22: 0.7, 26: 0.5, 30: 0.3, 34: 0.2}
+BITRATE_MULTIPLIER_MAP = {17: 0.95, 20: 0.8, 23: 0.65, 27: 0.45, 32: 0.3}
 
 QUALITY_MAP_CPU = {
     "Preset 4 (Best Size)": 4,
