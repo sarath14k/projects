@@ -1,8 +1,11 @@
 from gi.repository import Gtk, Gdk, GLib
 import os
+import uuid
+from pathlib import Path
 from ..components.file_row import FileRow
 from ..utils import ui
-from ..config import VIDEO_EXTS
+from .. import utils
+from ..config import MEDIA_EXTS, OUTPUT_DIR_NAME, QUALITY_MAP_GPU
 
 class FileManager:
     def __init__(self, window):
@@ -10,29 +13,33 @@ class FileManager:
         self.files = {} # path -> FileRow
 
     def add_files(self, paths):
+        params = self._get_current_params()
         for p in paths:
-            if p not in self.files:
-                row = FileRow(
-                    p,
-                    self.remove_file
-                )
-                self.window.file_list_box.add(row.root)
-                self.files[p] = row
+            # Filter out already converted files or files in output directory
+            if "_comp_" in os.path.basename(p) or OUTPUT_DIR_NAME in p:
+                continue
 
-                # Check output conflict
-                from pathlib import Path
-                from ..config import OUTPUT_DIR_NAME, QUALITY_MAP_GPU
-                from .. import utils
+            row_id = str(uuid.uuid4())
+            row = FileRow(
+                p,
+                self.remove_file,
+                params=params.copy(),
+                row_id=row_id
+            )
+            self.window.file_list_box.add(row.root)
+            self.files[row_id] = row
 
-                # Use current UI state for quality
-                q_map = self.window.active_quality_map if hasattr(self.window, "active_quality_map") else QUALITY_MAP_GPU
-                q_text = self.window.quality.get_active_text() if hasattr(self.window, "quality") else "Main - 50% (QV-26)"
+            # Check output conflict
 
-                out_path_str, _ = utils.generate_output_path(
-                    p, q_map, q_text, len(paths), OUTPUT_DIR_NAME
-                )
-                if Path(out_path_str).exists():
-                    row.show_conflict()
+            # Use current UI state for quality
+            q_map = self.window.active_quality_map if hasattr(self.window, "active_quality_map") else QUALITY_MAP_GPU
+            q_text = self.window.quality.get_active_text() if hasattr(self.window, "quality") else "Main - 50% (QV-26)"
+
+            out_path_str, _ = utils.generate_output_path(
+                p, q_map, q_text, len(paths), OUTPUT_DIR_NAME
+            )
+            if Path(out_path_str).exists():
+                row.show_conflict()
 
         self.window.file_list_box.show_all()
         self.window._update_empty_state()
@@ -111,23 +118,25 @@ class FileManager:
         """Process dropped data (URIs) and add valid video files."""
         uris = data.get_uris()
         paths = []
-        from pathlib import Path
         for uri in uris:
             try:
                 path_str, _ = GLib.filename_from_uri(uri)
                 path = Path(path_str)
-                if path.is_file() and path.suffix.lower() in VIDEO_EXTS:
-                    # Skip already converted files
-                    if "_comp_" not in path.name and "Converted" not in str(path):
+                if path.is_file() and path.suffix.lower() in MEDIA_EXTS:
+                    # Skip already converted files or folders
+                    if "_comp_" not in path.name and OUTPUT_DIR_NAME not in str(path):
                         paths.append(str(path))
                 elif path.is_dir():
                     for root, _, files in os.walk(path):
                         # Skip Converted folders
-                        if "Converted" in root:
+                        if OUTPUT_DIR_NAME in root:
                             continue
                         for name in files:
                             sub_path = Path(root) / name
-                            if sub_path.suffix.lower() in VIDEO_EXTS and "_comp_" not in name:
+                            if (
+                                sub_path.suffix.lower() in MEDIA_EXTS
+                                and "_comp_" not in name
+                            ):
                                 paths.append(str(sub_path))
             except Exception as e:
                 print(f"Error processing drag URI {uri}: {e}")
@@ -176,3 +185,44 @@ class FileManager:
                     ordered_files.append(f_row)
                     break
         return ordered_files
+
+    def apply_settings_to_all(self):
+        """Apply current sidebar settings to all files in the queue."""
+        params = self._get_current_params()
+        for row in self.files.values():
+            row.params.update(params)
+            # Check for conflict with new settings
+            q_map = (
+                self.window.active_quality_map
+                if hasattr(self.window, "active_quality_map")
+                else QUALITY_MAP_GPU
+            )
+            # Note: generate_output_path now needs more params
+            from ..utils import generate_output_path
+
+            out_path, _ = generate_output_path(
+                row.path,
+                q_map,
+                params["quality_text"],
+                len(self.files),
+                process_mode=params["process_mode"],
+                codec_key=params["codec_key"],
+                audio_codec_key=params["audio_codec"],
+            )
+            if Path(out_path).exists():
+                row.show_conflict()
+            else:
+                row.conflict.hide()
+
+        self.window.queue_status.set_text("Settings applied to all.")
+
+    def _get_current_params(self):
+        """Extract current settings from the sidebar UI."""
+        return {
+            "gpu": self.window.gpu_device.get_active_id(),
+            "codec_key": self.window.codec.get_active_text(),
+            "quality_text": self.window.quality.get_active_text(),
+            "scale": self.window.scale_chk.get_active(),
+            "process_mode": self.window.process_mode.get_active_text(),
+            "audio_codec": self.window.audio_codec.get_active_text(),
+        }

@@ -222,15 +222,54 @@ def get_video_info(file_path):
     except:
         return 1.0, 30.0, "unknown", 5_000_000, 1920
 
-def generate_output_path(src_path, quality_map, quality_text, file_count_in_dir, output_dir_name="Converted"):
+def generate_output_path(
+    src_path,
+    quality_map,
+    quality_text,
+    file_count_in_dir,
+    output_dir_name="Converted",
+    process_mode="Video + Audio",
+    codec_key="HEVC",
+    audio_codec_key="Copy",
+):
     """Generate output path for converted video. Always uses output folder."""
     src = Path(src_path)
     val = quality_map.get(quality_text, 26)
-    suffix = f"preset{val}" if val < 13 else f"qvbr{val}"
     src_dir = src.parent
 
     # Always create and use output folder
     out_dir = src_dir / output_dir_name
     out_dir.mkdir(exist_ok=True)
 
-    return str(out_dir / f"{src.stem}_comp_{suffix}.mkv"), str(out_dir)
+    # Clean up name parts
+    src_ext = src.suffix.lstrip(".").lower()
+    codec_name = codec_key.split(" ")[0].lower().replace("(", "").replace(")", "")
+    audio_codec = audio_codec_key.split(" ")[0].lower()
+
+    if process_mode == "Audio Only":
+        ext = ".m4a"
+        if "MP3" in audio_codec_key:
+            ext = ".mp3"
+        elif "Opus" in audio_codec_key:
+            ext = ".opus"
+        elif "FLAC" in audio_codec_key:
+            ext = ".flac"
+        elif audio_codec == "copy":
+            ext = src.suffix
+        filename = f"{src.stem}_{src_ext}_{audio_codec}_audio{ext}"
+    else:
+        # Smart container selection for multiplexing
+        container = ".mkv"  # Default safe container
+        
+        # Prefer .mp4 for web-friendly codecs
+        if ("AAC" in audio_codec_key or "MP3" in audio_codec_key) and ("HEVC" in codec_key or "H.264" in codec_key):
+            container = ".mp4"
+        elif "VP9" in codec_key or "Opus" in audio_codec_key:
+            container = ".webm"
+        elif "AV1" in codec_key:
+            container = ".mkv" # AV1 in mp4 is supported but mkv/webm is often preferred for compatibility
+            
+        suffix = f"preset{val}" if val < 13 else f"qvbr{val}"
+        filename = f"{src.stem}_{src_ext}_{codec_name}_{suffix}{container}"
+
+    return str(out_dir / filename), str(out_dir)

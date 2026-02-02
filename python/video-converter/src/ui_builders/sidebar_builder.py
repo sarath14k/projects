@@ -1,7 +1,15 @@
 """Sidebar builder for configuration options."""
 
 from gi.repository import Gtk
-from ..config import CODECS, AFTER_ACTIONS, AUTO_CLOSE_MAP, AFTER_COMPLETE, COMPRESSION_LEVELS
+from ..config import (
+    CODECS,
+    AFTER_ACTIONS,
+    AUTO_CLOSE_MAP,
+    AFTER_COMPLETE,
+    PROCESS_MODES,
+    AUDIO_CODECS,
+)
+
 
 def build_sidebar(window):
     """Build the configuration sidebar with all options.
@@ -14,9 +22,7 @@ def build_sidebar(window):
 
     # Sidebar revealer
     window.sidebar_revealer = Gtk.Revealer()
-    window.sidebar_revealer.set_transition_type(
-        Gtk.RevealerTransitionType.SLIDE_RIGHT
-    )
+    window.sidebar_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_RIGHT)
     window.sidebar_revealer.set_transition_duration(250)
     window.sidebar_revealer.set_reveal_child(True)
     main_hbox.pack_start(window.sidebar_revealer, False, False, 0)
@@ -44,6 +50,7 @@ def build_sidebar(window):
 
     # GPU Device
     from .. import utils
+
     window.gpu_device = Gtk.ComboBoxText()
     for path, label in utils.get_render_devices():
         window.gpu_device.append(path, label)
@@ -59,15 +66,35 @@ def build_sidebar(window):
     window.quality = Gtk.ComboBoxText()
     window._add_field(sidebar_content, "Quality / Preset", window.quality)
 
-    # Hardware Compression Level
-    window.compression_level = window._combo(list(COMPRESSION_LEVELS.keys()), "compression_level", 3)
-    window._add_field(sidebar_content, "HW Encoding Speed", window.compression_level)
-
     # Scale checkbox
     window.scale_chk = Gtk.Switch()
     window.scale_chk.set_active(True)
     window.scale_chk.set_halign(Gtk.Align.START)
     window._add_field(sidebar_content, "Limit to 1080p", window.scale_chk)
+
+    # Process Mode
+    window.process_mode = window._combo(PROCESS_MODES, "process_mode", 0)
+    window._add_field(sidebar_content, "Process Mode", window.process_mode)
+
+    # Audio Codec
+    window.audio_codec = window._combo(list(AUDIO_CODECS.keys()), "audio_codec", 0)
+    window._add_field(sidebar_content, "Audio Codec", window.audio_codec)
+
+    sidebar_content.pack_start(
+        Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 10
+    )
+
+    # Apply to all button
+    apply_all_btn = Gtk.Button(label="Apply to All Files")
+    apply_all_btn.get_style_context().add_class("suggested-action")
+    apply_all_btn.connect(
+        "clicked", lambda _: window.file_manager.apply_settings_to_all()
+    )
+    sidebar_content.pack_start(apply_all_btn, False, False, 0)
+
+    sidebar_content.pack_start(
+        Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 10
+    )
 
     # After action
     window.after_action = window._combo(AFTER_ACTIONS, "after_action", 0)

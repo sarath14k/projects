@@ -24,13 +24,16 @@ class FileRow:
         "handle",
         "duration",
         "out_path",
+        "params",
+        "settings_btn",
     )
 
-    def __init__(self, path_str, remove_cb):
+    def __init__(self, path_str, remove_cb, params=None, row_id=None):
         self.path = Path(path_str)
         self.out_path = None
         self.duration = None
-        self.id = path_str
+        self.id = row_id or path_str
+        self.params = params or {}
         self.log_data = collections.deque(maxlen=300)
         self.pulse_id = None
 
@@ -64,7 +67,11 @@ class FileRow:
         self.handle = eb
 
         # Thumbnail
-        self.thumb = Gtk.Image.new_from_icon_name("video-x-generic-symbolic", Gtk.IconSize.DIALOG)
+        audio_exts = {".mp3", ".m4a", ".aac", ".flac", ".opus", ".wav", ".ogg"}
+        is_audio = self.path.suffix.lower() in audio_exts
+        icon = "audio-x-generic-symbolic" if is_audio else "video-x-generic-symbolic"
+
+        self.thumb = Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.DIALOG)
         self.thumb.set_pixel_size(48)
         self.thumb.set_opacity(0.3)
         self.thumb.get_style_context().add_class("thumbnail")
@@ -129,12 +136,19 @@ class FileRow:
         self.remove_btn.get_style_context().add_class("row-remove-btn")
         self.remove_btn.connect("clicked", lambda _: remove_cb(self.id))
 
+        # Settings button
+        self.settings_btn = Gtk.Button.new_from_icon_name("emblem-system-symbolic", Gtk.IconSize.BUTTON)
+        self.settings_btn.set_tooltip_text("File Settings")
+        self.settings_btn.connect("clicked", self.on_settings_clicked)
+
+        action_box.pack_start(self.settings_btn, False, False, 0)
         action_box.pack_start(self.play_btn, False, False, 0)
         action_box.pack_start(self.log_btn, False, False, 0)
         action_box.pack_start(self.remove_btn, False, False, 0)
         hbox.pack_end(action_box, False, False, 0)
 
-        THUMB_POOL.submit(self._generate_thumb)
+        if not is_audio:
+            THUMB_POOL.submit(self._generate_thumb)
 
     def show_log(self, btn):
         dialog = Gtk.Dialog(title="FFmpeg Log", flags=0)
@@ -280,3 +294,131 @@ class FileRow:
             f"<span size='medium' alpha='80%'>{init_size_str} ➝ <span foreground='#c061cb'>{est_size_str}</span></span>"
         )
         self.info.set_markup(markup)
+
+    def set_finished(self, elapsed_time, initial_size_str, final_size_str, compression_pct):
+        self.progress.set_fraction(1.0)
+        from .. import utils
+        
+        # Color the compression percent based on performance
+        color = "#2ec27e" if compression_pct > 0 else "#e01b24"
+        
+        markup = (
+            f"<span size='large' foreground='#2ec27e'><b>Completed in {utils.format_time(elapsed_time)}</b></span>\n"
+            f"<span size='medium' alpha='80%'>{initial_size_str} ➝ <span foreground='#c061cb'><b>{final_size_str}</b></span> "
+            f"(<span foreground='{color}'><b>-{compression_pct:.1f}%</b></span>)</span>"
+        )
+        self.info.set_markup(markup)
+
+    def on_settings_clicked(self, btn):
+        dialog = FileSettingsDialog(self.root.get_toplevel(), self.params)
+        if dialog.run() == Gtk.ResponseType.OK:
+            self.params = dialog.get_params()
+            # Re-check conflict if settings changed (though out_path depends on quality)
+            # For simplicity, we can let FileManager handle update if needed, 
+            # but current architecture calculates out_path just before encoding or on add.
+            # We should probably update the out_path or at least visual indicators here if needed.
+        dialog.destroy()
+
+class FileSettingsDialog(Gtk.Dialog):
+    def __init__(self, parent, params):
+        super().__init__(title="File Conversion Settings", transient_for=parent, flags=0)
+        self.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK)
+        self.set_default_size(400, -1)
+        
+        self.params = params.copy()
+        
+        box = self.get_content_area()
+        box.set_spacing(10)
+        box.set_border_width(15)
+        
+        from ..config import CODECS, QUALITY_MAP_GPU, QUALITY_MAP_CPU
+        from .. import utils
+        
+        # GPU Device
+        self.gpu_device = Gtk.ComboBoxText()
+        for path, label in utils.get_render_devices():
+            self.gpu_device.append(path, label)
+        self.gpu_device.set_active_id(self.params.get("gpu", "cpu"))
+        self._add_row(box, "GPU Device", self.gpu_device)
+        
+        # Codec
+        self.codec = Gtk.ComboBoxText()
+        for c in CODECS.keys():
+            self.codec.append_text(c)
+        self.codec.set_active_id(self.params.get("codec_key", "HEVC (VAAPI 10-bit)"))
+        # ComboBoxText set_active_id works only if strings are added properly as IDs.
+        # Let's fix that by searching for index.
+        self._set_combo_text(self.codec, self.params.get("codec_key"))
+        self.codec.connect("changed", self.on_codec_changed)
+        self._add_row(box, "Codec", self.codec)
+        
+        # Quality
+        self.quality = Gtk.ComboBoxText()
+        self._add_row(box, "Quality / Preset", self.quality)
+
+        # Scale
+        self.scale_chk = Gtk.Switch()
+        self.scale_chk.set_active(self.params.get("scale", True))
+        self.scale_chk.set_halign(Gtk.Align.START)
+        self._add_row(box, "Limit to 1080p", self.scale_chk)
+
+        # Process Mode
+        from ..config import PROCESS_MODES, AUDIO_CODECS
+
+        self.process_mode = Gtk.ComboBoxText()
+        for mode in PROCESS_MODES:
+            self.process_mode.append_text(mode)
+        self._set_combo_text(self.process_mode, self.params.get("process_mode", "Video + Audio"))
+        self._add_row(box, "Process Mode", self.process_mode)
+
+        # Audio Codec
+        self.audio_codec = Gtk.ComboBoxText()
+        for c in AUDIO_CODECS.keys():
+            self.audio_codec.append_text(c)
+        self._set_combo_text(
+            self.audio_codec, self.params.get("audio_codec", "Copy")
+        )
+        self._add_row(box, "Audio Codec", self.audio_codec)
+        
+        # Initial quality populate
+        self.on_codec_changed(self.codec)
+        self._set_combo_text(self.quality, self.params.get("quality_text"))
+        
+        self.show_all()
+
+    def _add_row(self, box, label, widget):
+        row = Gtk.Box(spacing=10)
+        lbl = Gtk.Label(label=label, xalign=0)
+        lbl.set_size_request(150, -1)
+        row.pack_start(lbl, False, False, 0)
+        row.pack_start(widget, True, True, 0)
+        box.pack_start(row, False, False, 0)
+
+    def _set_combo_text(self, combo, text):
+        if not text: return
+        model = combo.get_model()
+        for i, row in enumerate(model):
+            if row[0] == text:
+                combo.set_active(i)
+                break
+
+    def on_codec_changed(self, combo):
+        codec_key = combo.get_active_text()
+        from ..config import QUALITY_MAP_GPU, QUALITY_MAP_CPU
+        new_map = QUALITY_MAP_CPU if "CPU" in codec_key else QUALITY_MAP_GPU
+        
+        self.quality.remove_all()
+        sorted_items = sorted(new_map.items(), key=lambda item: item[1])
+        for k, v in sorted_items:
+            self.quality.append_text(k)
+        self.quality.set_active(0)
+
+    def get_params(self):
+        return {
+            "gpu": self.gpu_device.get_active_id(),
+            "codec_key": self.codec.get_active_text(),
+            "quality_text": self.quality.get_active_text(),
+            "scale": self.scale_chk.get_active(),
+            "process_mode": self.process_mode.get_active_text(),
+            "audio_codec": self.audio_codec.get_active_text(),
+        }

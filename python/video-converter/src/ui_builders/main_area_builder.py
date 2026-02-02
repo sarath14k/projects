@@ -1,7 +1,7 @@
 """Main area builder for file list and controls."""
 
 from gi.repository import Gtk, Gdk, Pango
-from ..config import VIDEO_EXTS
+from ..config import MEDIA_EXTS
 
 def build_main_area(window):
     """Build the main file list area with controls.

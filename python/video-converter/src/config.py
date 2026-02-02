@@ -11,7 +11,7 @@ OUTPUT_DIR_NAME = "Video converter output"
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-VIDEO_EXTS = {
+MEDIA_EXTS = {
     ".mp4",
     ".mkv",
     ".avi",
@@ -23,6 +23,13 @@ VIDEO_EXTS = {
     ".mts",
     ".m2ts",
     ".ts",
+    ".mp3",
+    ".m4a",
+    ".aac",
+    ".flac",
+    ".opus",
+    ".wav",
+    ".ogg",
 }
 
 CODECS = {
@@ -42,12 +49,7 @@ QUALITY_MAP_GPU = {
 
 BITRATE_MULTIPLIER_MAP = {17: 0.95, 20: 0.8, 23: 0.65, 27: 0.45, 32: 0.3}
 
-COMPRESSION_LEVELS = {
-    "Level 1 (Ultra)": 1,
-    "Level 2 (High)": 2,
-    "Level 3 (Main)": 3,
-    "Level 4 (Lite)": 4,
-}
+DEFAULT_COMPRESSION_LEVEL = 1
 
 QUALITY_MAP_CPU = {
     "Preset 4 (Best)": 4,
@@ -58,6 +60,16 @@ QUALITY_MAP_CPU = {
     "Preset 9 (quick)": 9,
     "Preset 10 (Instant)": 10,
 }
+
+AUDIO_CODECS = {
+    "Copy": "copy",
+    "AAC (Web Recommended)": "aac",
+    "MP3": "libmp3lame",
+    "Opus": "libopus",
+    "FLAC": "flac",
+}
+
+PROCESS_MODES = ("Video + Audio", "Audio Only")
 
 AUTO_CLOSE_MAP = {"Never": 0, "30 seconds": 30, "1 minute": 60, "2 minutes": 120, "5 minutes": 300}
 AFTER_ACTIONS = ("Keep source", "Move to Trash", "Delete permanently")

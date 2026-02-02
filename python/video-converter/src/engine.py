@@ -2,76 +2,160 @@ import time
 import subprocess
 
 def build_ffmpeg_command(
-    file, out, codec_conf, val, device_path, width, input_codec, target_bitrate, max_bitrate, limit_1080p, compression_level=4
+    file,
+    out,
+    codec_conf,
+    val,
+    device_path,
+    width,
+    input_codec,
+    target_bitrate,
+    max_bitrate,
+    limit_1080p,
+    compression_level=4,
+    process_mode="Video + Audio",
+    audio_codec_key="Copy",
 ):
     # Check if using CPU - either codec type is CPU OR device is "cpu"
     is_cpu = codec_conf["type"] == "cpu" or device_path == "cpu"
 
-    # Force CPU decoding ONLY for AV1 input when using GPU for encoding
-    force_cpu_decode = (input_codec == "av1" and not is_cpu)
+    # Force CPU decoding ONLY for codecs that often have poor/no VAAPI support
+    problematic_vaapi_decoders = {
+        "av1",
+        "mpeg4",
+        "msmpeg4v3",
+        "msmpeg4v2",
+        "msmpeg4v1",
+        "flv1",
+        "vp8",
+    }
+    force_cpu_decode = input_codec in problematic_vaapi_decoders and not is_cpu
 
-    cmd = ["ffmpeg", "-y", "-threads", "0", "-progress", "pipe:2", "-hide_banner", "-loglevel", "warning"]
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-threads",
+        "0",
+        "-progress",
+        "pipe:2",
+        "-hide_banner",
+        "-loglevel",
+        "warning",
+    ]
 
     if not is_cpu:
         # Initialize VAAPI device with optimized thread queue
-        cmd.extend(["-init_hw_device", f"vaapi=va:{device_path}", "-filter_hw_device", "va"])
+        cmd.extend(
+            ["-init_hw_device", f"vaapi=va:{device_path}", "-filter_hw_device", "va"]
+        )
         if not force_cpu_decode:
             # Restore hardware accelerated decoding for maximum performance
-            cmd.extend(["-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi", "-extra_hw_frames", "256"])
+            cmd.extend(
+                [
+                    "-hwaccel",
+                    "vaapi",
+                    "-hwaccel_output_format",
+                    "vaapi",
+                    "-extra_hw_frames",
+                    "256",
+                ]
+            )
 
     cmd.extend(["-i", file])
 
-    vf_chain = []
-    should_scale = limit_1080p and (width > 1920)
-
-    if is_cpu:
-        if should_scale:
-            vf_chain.append("scale='min(1920,iw)':-2")
-        vf_chain.append(f"format={codec_conf['fmt']}")
+    if process_mode == "Audio Only":
+        cmd.append("-vn")
     else:
+        vf_chain = []
+        should_scale = limit_1080p and (width > 1920)
 
-        if force_cpu_decode:
-            # Decoded on CPU, upload to GPU for filtering/encoding
-            if codec_conf['fmt'] == 'p010': # 10-bit
-                vf_chain.append("format=p010,hwupload")
-            else: # 8-bit
-                vf_chain.append("format=nv12,hwupload")
-
-        if should_scale:
-            vf_chain.append(f"scale_vaapi=w='min(1920,iw)':h=-2:format={codec_conf['fmt']}")
+        if is_cpu:
+            if should_scale:
+                vf_chain.append("scale='min(1920,iw)':-2")
+            vf_chain.append(f"format={codec_conf['fmt']}")
         else:
-            vf_chain.append(f"scale_vaapi=format={codec_conf['fmt']}")
+            if force_cpu_decode:
+                # Decoded on CPU, upload to GPU for filtering/encoding
+                if codec_conf["fmt"] == "p010":  # 10-bit
+                    vf_chain.append("format=p010,hwupload")
+                else:  # 8-bit
+                    vf_chain.append("format=nv12,hwupload")
 
-    if vf_chain:
-        cmd.extend(["-vf", ",".join(vf_chain)])
+            if should_scale:
+                vf_chain.append(
+                    f"scale_vaapi=w='min(1920,iw)':h=-2:format={codec_conf['fmt']}"
+                )
+            else:
+                vf_chain.append(f"scale_vaapi=format={codec_conf['fmt']}")
 
-    cmd.extend(["-c:v", codec_conf["name"] if not (device_path == "cpu" and codec_conf["type"] != "cpu") else "libx265"])
+        if vf_chain:
+            cmd.extend(["-vf", ",".join(vf_chain)])
 
-    if is_cpu:
-        # Use CRF for CPU encoding
-        cmd.extend(["-crf", "26", "-preset", "medium"])
-        if codec_conf["name"] == "libsvtav1":
-            # Speed optimizations for SVT-AV1
-            cmd.extend(["-svtav1-params", "lp=8:lookahead=20:scd=1:tune=0"])
-    else:
-        # Balanced compression for better speed/quality tradeoff
-        cmd.extend(["-compression_level", str(compression_level), "-async_depth", "4"])
-        buf_size = max_bitrate * 2
-        cmd.extend([
-            "-rc_mode", "QVBR",
-            "-global_quality", str(val),
-            "-b:v", str(target_bitrate),
-            "-maxrate", str(max_bitrate),
-            "-bufsize", str(buf_size)
-        ])
+        cmd.extend(
+            [
+                "-c:v",
+                codec_conf["name"]
+                if not (device_path == "cpu" and codec_conf["type"] != "cpu")
+                else "libx265",
+            ]
+        )
 
-    cmd.extend([
-        "-c:a", "copy",
-        "-c:s", "copy",
-        "-map_metadata", "0",
-        "-avoid_negative_ts", "1",
-        out,
-    ])
+        if is_cpu:
+            if codec_conf["name"] == "libsvtav1":
+                cmd.extend(["-preset", str(val)])
+                cmd.extend(["-svtav1-params", "lp=8:lookahead=20:scd=1:tune=0"])
+            else:
+                x265_presets = {
+                    4: "slower",
+                    5: "slow",
+                    6: "medium",
+                    7: "faster",
+                    8: "fast",
+                    9: "veryfast",
+                    10: "ultrafast",
+                }
+                preset = x265_presets.get(val, "medium")
+                cmd.extend(["-crf", "26", "-preset", preset])
+        else:
+            cmd.extend(["-compression_level", str(compression_level)])
+            depth = (
+                8 if compression_level <= 2 else (6 if compression_level <= 4 else 4)
+            )
+            cmd.extend(["-async_depth", str(depth)])
+
+            buf_size = max_bitrate * 2
+            cmd.extend(
+                [
+                    "-rc_mode",
+                    "QVBR",
+                    "-global_quality",
+                    str(val),
+                    "-b:v",
+                    str(target_bitrate),
+                    "-maxrate",
+                    str(max_bitrate),
+                    "-bufsize",
+                    str(buf_size),
+                ]
+            )
+
+    # Audio encoding logic
+    from .config import AUDIO_CODECS
+
+    audio_codec_name = AUDIO_CODECS.get(audio_codec_key, "copy")
+    cmd.extend(["-c:a", audio_codec_name])
+
+    cmd.extend(
+        [
+            "-c:s",
+            "copy",
+            "-map_metadata",
+            "0",
+            "-avoid_negative_ts",
+            "1",
+            out,
+        ]
+    )
     return cmd
 
 class ProgressParser:

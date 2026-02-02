@@ -104,14 +104,26 @@ class ConversionManager:
             # Scroll to row
             # adj = self.window.file_list_box.get_adjustment() ... (UI logic mostly)
 
-            self._encode_file(row, file_list, i)
+            result = self._encode_file(row, file_list, i)
 
             ui(row.set_active, False)
             ui(row.set_reorder_locked, False)
             ui(row.remove_btn.set_sensitive, True)
-            ui(row.set_success)
-            ui(row.info.set_text, "Completed")
-            ui(row.play_btn.set_visible, True)
+            
+            if result is not None:
+                elapsed, init_size, init_size_str = result
+                ui(row.set_success)
+                from .. import utils
+                final_size = utils.get_file_size(row.out_path)
+                final_size_str = utils.human_readable_size(final_size)
+                
+                # Calculate compression percentage
+                # Improvement: (Initial - Final) / Initial * 100
+                diff = init_size - final_size
+                compression_pct = (diff / init_size * 100) if init_size > 0 else 0
+                
+                ui(row.set_finished, elapsed, init_size_str, final_size_str, compression_pct)
+                ui(row.play_btn.set_visible, True)
 
             # Post-action per file? (Not implemented in original fully for each file, mostly for queue)
 
@@ -119,25 +131,21 @@ class ConversionManager:
         ui(self._on_queue_finished)
 
     def _encode_file(self, row, file_list, current_index):
-        params = {}
-        # We need a way to get params synchronously from UI thread.
-        # Hack: generic getter
-
-        done = threading.Event()
-        def get_params():
-            # Get codec configuration
-            codec_key = self.window.codec.get_active_text()
-            from ..config import CODECS, BITRATE_MULTIPLIER_MAP
-            params["codec"] = CODECS[codec_key]
-            params["quality"] = self.window.active_quality_map.get(self.window.quality.get_active_text(), 23)
-            params["gpu"] = self.window.gpu_device.get_active_id()
-            params["scale"] = self.window.scale_chk.get_active()
-            from ..config import COMPRESSION_LEVELS
-            params["compression_level"] = COMPRESSION_LEVELS.get(self.window.compression_level.get_active_text(), 4)
-            done.set()
-
-        GLib.idle_add(get_params)
-        done.wait()
+        # Resolve parameters from row.params
+        from ..config import CODECS, BITRATE_MULTIPLIER_MAP, QUALITY_MAP_GPU, QUALITY_MAP_CPU, DEFAULT_COMPRESSION_LEVEL
+        
+        p = row.params
+        codec_key = p.get("codec_key", "HEVC (VAAPI 10-bit)")
+        params = {
+            "codec": CODECS.get(codec_key, CODECS["HEVC (VAAPI 10-bit)"]),
+            "gpu": p.get("gpu", "cpu"),
+            "scale": p.get("scale", True),
+            "compression_level": DEFAULT_COMPRESSION_LEVEL
+        }
+        
+        # Resolve quality value based on codec type
+        q_map = QUALITY_MAP_CPU if "CPU" in codec_key else QUALITY_MAP_GPU
+        params["quality"] = q_map.get(p.get("quality_text"), 23 if "CPU" not in codec_key else 6)
 
         # Get video info
         from .. import utils
@@ -151,20 +159,37 @@ class ConversionManager:
         target_bitrate = max(int(src_bitrate * multiplier), 300_000)
         max_bitrate = max(int(target_bitrate * 1.5), 600_000)
 
-        # Generate output path using shared utility
-        quality_map = self.window.active_quality_map
-        quality_text = self.window.quality.get_active_text()
-        from ..config import OUTPUT_DIR_NAME
-        file_count = len(self.window.file_manager.files)
+        # Prepare output path and parameters
+        codec_settings = row.params.get("codec_key", "HEVC (VAAPI 10-bit)")
+        q_label = row.params.get("quality_text", "Main - 65% (QV-23)")
+        mode_label = row.params.get("process_mode", "Video + Audio")
+        audio_label = row.params.get("audio_codec", "Copy")
 
-        out_path, _ = utils.generate_output_path(
-            row.path, quality_map, quality_text, file_count, OUTPUT_DIR_NAME
+        from ..config import OUTPUT_DIR_NAME, QUALITY_MAP_GPU, QUALITY_MAP_CPU
+        
+        # Decide quality map locally
+        is_cpu = "CPU" in codec_settings
+        active_q_map = QUALITY_MAP_CPU if is_cpu else QUALITY_MAP_GPU
+        
+        f_count = len(self.window.file_manager.files)
+
+        from ..utils import generate_output_path
+        final_out_path, final_out_dir = generate_output_path(
+            row.path,
+            active_q_map,
+            q_label,
+            f_count,
+            OUTPUT_DIR_NAME,
+            process_mode=mode_label,
+            codec_key=codec_settings,
+            audio_codec_key=audio_label,
         )
-        row.out_path = Path(out_path)
+        row.out_path = Path(final_out_path)
+        self.window.last_output_dir = final_out_dir
 
         cmd = build_ffmpeg_command(
             str(row.path),
-            str(out_path),
+            str(row.out_path),
             params["codec"],
             params["quality"],
             params["gpu"],
@@ -173,7 +198,9 @@ class ConversionManager:
             target_bitrate,
             max_bitrate,
             params["scale"],
-            params["compression_level"]
+            compression_level=params["compression_level"],
+            process_mode=mode_label,
+            audio_codec_key=audio_label,
         )
 
         parser = ProgressParser(duration, fps)
@@ -183,6 +210,7 @@ class ConversionManager:
         ui(row.log_btn.set_visible, True)
 
         try:
+            start_time = time.time()
             self.ffmpeg_process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.DEVNULL, # Match original C++ logic
@@ -240,15 +268,19 @@ class ConversionManager:
                     row.log_data.append(line.strip())
 
             self.ffmpeg_process.wait()
+            elapsed = time.time() - start_time
             return_code = self.ffmpeg_process.returncode
             self.ffmpeg_process = None
 
             if return_code == 0 and not self.stop_requested:
                 ui(self.window._handle_source_action, str(row.path))
+                return elapsed, init_size, init_size_str
 
         except Exception as e:
             row.log_data.append(f"\nError: {e}")
             ui(row.info.set_text, "Error")
+            
+        return None
 
     def _on_queue_finished(self):
         self.window.start_btn.set_visible(True)

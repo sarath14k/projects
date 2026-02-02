@@ -49,6 +49,9 @@ class PrefsManager:
 
         # Restore path
         self.window.last_folder = self.config.get("last_folder", str(Path.home()))
+        self.window.last_output_dir = self.config.get("last_output_dir", None)
+        if self.window.last_output_dir and os.path.exists(self.window.last_output_dir):
+            self.window.open_out_btn.set_sensitive(True)
 
         # Restore Theme
         pitch_black = False
@@ -73,4 +76,5 @@ class PrefsManager:
             "gpu_device": self.window.gpu_device.get_active(),
             "compression_level": self.window.compression_level.get_active(),
             "pitch_black": self.window.theme_switch.get_active(),
+            "last_output_dir": self.window.last_output_dir,
         }

@@ -40,7 +40,6 @@ STANDARD_CSS = """
     .row-card:hover {
         background-color: shade(@card_bg, 1.05);
         box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-        transition: all 0.2s ease;
     }
 
     .file-list { background: transparent; }
@@ -75,7 +74,6 @@ STANDARD_CSS = """
         padding: 0 12px;
         border-radius: 8px;
         font-weight: 500;
-        transition: background-color 0.15s ease;
     }
 
     .destructive-action {
@@ -168,7 +166,6 @@ PITCH_BLACK_CSS = """
     * {
         -gtk-icon-style: symbolic;
         font-family: "Inter", "Roboto", "Segoe UI", "Cantarell", "Ubuntu", sans-serif;
-        box-sizing: border-box;
     }
 
     window, .background, headerbar, list, treeview, textview, eventbox, scrolledwindow, viewport, box {
@@ -176,7 +173,6 @@ PITCH_BLACK_CSS = """
         background-image: none;
         border-color: @border_color;
         color: @fg_color;
-        transition: background-color 0.2s ease;
     }
 
     .sidebar-bg {
@@ -189,24 +185,19 @@ PITCH_BLACK_CSS = """
         border: 1px solid @border_color;
         border-radius: 16px;
         padding: 12px;
-        transition: all 0.2s ease;
-        position: relative;
-        overflow: hidden;
     }
     
     .row-card:hover {
         background-color: #111111;
-        transform: translateY(-1px);
         box-shadow: 0 4px 12px @shadow_color;
     }
     
     .row-card:active {
-        transform: translateY(0);
+        background-color: shade(@card_bg, 0.9);
     }
     
     .row-card.disabled {
         opacity: 0.5;
-        pointer-events: none;
     }
     
     .row-card.error {
