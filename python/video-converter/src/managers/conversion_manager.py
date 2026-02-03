@@ -8,7 +8,16 @@ from gi.repository import GLib, Gtk
 
 from ..engine import build_ffmpeg_command, ProgressParser
 from ..utils import ui, SleepInhibitor
-from ..config import AUTO_CLOSE_MAP
+from ..config import (
+    AUTO_CLOSE_MAP,
+    CODECS,
+    BITRATE_MULTIPLIER_MAP,
+    QUALITY_MAP_GPU,
+    QUALITY_MAP_CPU,
+    DEFAULT_COMPRESSION_LEVEL,
+    OUTPUT_DIR_NAME,
+)
+from .. import utils
 
 class ConversionManager:
     def __init__(self, window):
@@ -28,7 +37,7 @@ class ConversionManager:
         self.window.stop_btn.set_sensitive(True)
         self.window.pause_btn.set_visible(True)
         self.window.pause_btn.set_sensitive(True)
-        self.window.add_btn.set_sensitive(False)
+        self.window.add_btn.set_sensitive(True)
         self.window.open_out_btn.set_sensitive(False)
 
         self.sleep_inhibitor.start()
@@ -83,28 +92,33 @@ class ConversionManager:
             self.queue_status.set_text("Processing...")
 
     def _run_queue(self):
-        file_list = self.window.file_manager.get_file_list()
-        total = len(file_list)
-
-        for i, row in enumerate(file_list):
-            if self.stop_requested:
+        while not self.stop_requested:
+            file_list = self.window.file_manager.get_file_list()
+            
+            # Find the first pending file
+            row = None
+            current_index = -1
+            for i, r in enumerate(file_list):
+                if r.status == "pending":
+                    row = r
+                    current_index = i
+                    break
+            
+            if row is None:
+                # No more pending files
                 break
-            # Skip if file was removed from queue while paused or running
-            if row.id not in self.window.file_manager.files:
-                continue
 
+            total = len(file_list)
             self.current_file_row = row
             path = row.path
 
             ui(row.set_active, True)
             ui(row.set_reorder_locked, True)
             ui(row.remove_btn.set_sensitive, False)
-            ui(self.queue_status.set_text, f"Processing {i+1} of {total}...")
+            ui(self.queue_status.set_text, f"Processing {current_index + 1} of {total}...")
 
-            # Scroll to row
-            # adj = self.window.file_list_box.get_adjustment() ... (UI logic mostly)
-
-            result = self._encode_file(row, file_list, i)
+            ui(setattr, row, "status", "processing")
+            result = self._encode_file(row, current_index)
 
             ui(row.set_active, False)
             ui(row.set_reorder_locked, False)
@@ -118,22 +132,23 @@ class ConversionManager:
                 final_size_str = utils.human_readable_size(final_size)
                 
                 # Calculate compression percentage
-                # Improvement: (Initial - Final) / Initial * 100
                 diff = init_size - final_size
                 compression_pct = (diff / init_size * 100) if init_size > 0 else 0
                 
                 ui(row.set_finished, elapsed, init_size_str, final_size_str, compression_pct)
                 ui(row.play_btn.set_visible, True)
-
-            # Post-action per file? (Not implemented in original fully for each file, mostly for queue)
+            else:
+                # If it failed or was stopped, it shouldn't be "pending" anymore if we want to skip it, 
+                # but if stopped we might want to resume. 
+                # For now, if result is None and not stop_requested, mark as error.
+                if not self.stop_requested:
+                    ui(setattr, row, "status", "failed")
 
         self.sleep_inhibitor.stop()
         ui(self._on_queue_finished)
 
-    def _encode_file(self, row, file_list, current_index):
+    def _encode_file(self, row, current_index):
         # Resolve parameters from row.params
-        from ..config import CODECS, BITRATE_MULTIPLIER_MAP, QUALITY_MAP_GPU, QUALITY_MAP_CPU, DEFAULT_COMPRESSION_LEVEL
-        
         p = row.params
         codec_key = p.get("codec_key", "HEVC (VAAPI 10-bit)")
         params = {
@@ -148,11 +163,9 @@ class ConversionManager:
         params["quality"] = q_map.get(p.get("quality_text"), 23 if "CPU" not in codec_key else 6)
 
         # Get video info
-        from .. import utils
         duration, fps, input_codec, src_bitrate, width = utils.get_video_info(row.path)
 
         # Calculate target and max bitrate (bits/s to match FFmpeg expectation)
-        from ..config import BITRATE_MULTIPLIER_MAP
         quality_val = params["quality"]
         multiplier = BITRATE_MULTIPLIER_MAP.get(quality_val, 0.5)
         # Match original C++ logic for minimum bitrate safety
@@ -164,8 +177,6 @@ class ConversionManager:
         q_label = row.params.get("quality_text", "Main - 65% (QV-23)")
         mode_label = row.params.get("process_mode", "Video + Audio")
         audio_label = row.params.get("audio_codec", "Copy")
-
-        from ..config import OUTPUT_DIR_NAME, QUALITY_MAP_GPU, QUALITY_MAP_CPU
         
         # Decide quality map locally
         is_cpu = "CPU" in codec_settings
@@ -173,8 +184,7 @@ class ConversionManager:
         
         f_count = len(self.window.file_manager.files)
 
-        from ..utils import generate_output_path
-        final_out_path, final_out_dir = generate_output_path(
+        final_out_path, final_out_dir = utils.generate_output_path(
             row.path,
             active_q_map,
             q_label,
@@ -220,10 +230,17 @@ class ConversionManager:
                 bufsize=1
             )
 
-            # Pre-calculate file size for loop optimization
-            from .. import utils
+            # Pre-calculate file size and total pending duration for efficiency
             init_size = utils.get_file_size(row.path)
             init_size_str = utils.human_readable_size(init_size)
+            
+            # Sum durations of all pending files in the queue
+            def _get_pending_dur():
+                flist = self.window.file_manager.get_file_list()
+                return sum(r.duration for r in flist[current_index+1:] if r.duration)
+            
+            pending_dur = _get_pending_dur()
+            last_dur_check = time.time()
 
             last_ui_update = 0
             # iterate directly over stderr for maximum efficiency (no busy-waiting)
@@ -246,13 +263,16 @@ class ConversionManager:
                         effective_speed = speed if speed > 0.1 else 1.0
 
                         # Add estimated time for pending files
-                        for j in range(current_index + 1, len(file_list)):
-                            next_row = file_list[j]
-                            # Durations should be available from FileRow (populated on add)
-                            # If not, fallback to current file's duration as estimate
-                            next_dur = next_row.duration if next_row.duration else duration
-                            q_rem += next_dur / effective_speed
-                        est_size = int(init_size * pct) if pct > 0 else 0
+                        # Re-calculate pending duration only every few seconds or if it's 0
+                        now_dur = time.time()
+                        if now_dur - last_dur_check > 2.0:
+                            pending_dur = _get_pending_dur()
+                            last_dur_check = now_dur
+                            
+                        q_rem += pending_dur / effective_speed
+                        # Calculate accurate estimated final size based on current output size
+                        current_out_size = utils.get_file_size(row.out_path)
+                        est_size = int(current_out_size / pct) if pct > 0.05 else 0 # Wait for 5% progress for stability
                         est_size_str = utils.human_readable_size(est_size) if est_size > 0 else "..."
                         ui(row.update_progress, pct, fps, speed, bitrate, rem, q_rem, init_size_str, est_size_str)
 

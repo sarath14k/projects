@@ -10,7 +10,8 @@ from ..config import MEDIA_EXTS, OUTPUT_DIR_NAME, QUALITY_MAP_GPU
 class FileManager:
     def __init__(self, window):
         self.window = window
-        self.files = {} # path -> FileRow
+        self.files = {} # id -> FileRow
+        self.order = [] # list of ids
 
     def add_files(self, paths):
         params = self._get_current_params()
@@ -28,6 +29,7 @@ class FileManager:
             )
             self.window.file_list_box.add(row.root)
             self.files[row_id] = row
+            self.order.append(row_id)
 
             # Check output conflict
 
@@ -54,6 +56,8 @@ class FileManager:
             row_container = row.root.get_parent()
             self.window.file_list_box.remove(row_container)
             del self.files[path]
+            if path in self.order:
+                self.order.remove(path)
             self.window._update_empty_state()
             self.window.start_btn.set_sensitive(bool(self.files))
             self.window.open_out_btn.set_sensitive(bool(self.files))
@@ -71,6 +75,8 @@ class FileManager:
             row_container = row.root.get_parent()
             self.window.file_list_box.remove(row_container)
             del self.files[fid]
+            if fid in self.order:
+                self.order.remove(fid)
 
         # If the list is truly empty (nothing was encoding), clear status labels
         if not self.files:
@@ -95,6 +101,8 @@ class FileManager:
             row_container = row.root.get_parent()
             self.window.file_list_box.remove(row_container)
             self.window.file_list_box.insert(row_container, i)
+        
+        self.order = sorted_paths
 
     def on_drag_motion(self, listbox, context, x, y, time):
         # Determine if we are dragging a row (reorder) or URIs (adding files)
@@ -170,21 +178,16 @@ class FileManager:
         listbox.remove(dragged_row)
         listbox.insert(dragged_row, target_index)
 
+        # Update internal order
+        if dragged_id in self.order:
+            self.order.remove(dragged_id)
+        self.order.insert(target_index, dragged_id)
+
         Gtk.drag_finish(context, True, False, time)
 
     def get_file_list(self):
-        """Return file rows in the visual order they appear in the Gtk.ListBox."""
-        ordered_files = []
-        for row_container in self.window.file_list_box.get_children():
-            # row_container is the Gtk.ListBoxRow wrapper
-            # get_child() returns the FileRow.root (EventBox) that was added
-            child_widget = row_container.get_child()
-            # Find the FileRow that owns this widget
-            for f_row in self.files.values():
-                if f_row.root is child_widget:
-                    ordered_files.append(f_row)
-                    break
-        return ordered_files
+        """Return file rows in the current order."""
+        return [self.files[fid] for fid in self.order if fid in self.files]
 
     def apply_settings_to_all(self):
         """Apply current sidebar settings to all files in the queue."""

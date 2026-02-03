@@ -1,6 +1,7 @@
 import os
 import subprocess
 import collections
+import hashlib
 from pathlib import Path
 from gi.repository import Gtk, GdkPixbuf, Pango, GLib, Gdk
 from ..config import *
@@ -26,6 +27,7 @@ class FileRow:
         "out_path",
         "params",
         "settings_btn",
+        "status",
     )
 
     def __init__(self, path_str, remove_cb, params=None, row_id=None):
@@ -34,6 +36,7 @@ class FileRow:
         self.duration = None
         self.id = row_id or path_str
         self.params = params or {}
+        self.status = "pending"
         self.log_data = collections.deque(maxlen=300)
         self.pulse_id = None
 
@@ -195,8 +198,9 @@ class FileRow:
             info = utils.get_video_info(str(self.path))
             self.duration = info[0]
 
-            # Match original naming
-            thumb_path = CACHE_DIR / f"{abs(hash(str(self.path)))}.jpg"
+            # Match original naming - use MD5 for cross-session stability
+            h = hashlib.md5(str(self.path).encode()).hexdigest()
+            thumb_path = CACHE_DIR / f"{h}.jpg"
             if not thumb_path.exists():
                 import subprocess
                 # Try original command: seek to 5s
@@ -230,17 +234,18 @@ class FileRow:
 
     def set_active(self, active):
         if active:
-            self.root.get_style_context().add_class("active-row")
-            self.label.get_style_context().add_class("activity-text")
+            ui(self.root.get_style_context().add_class, "active-row")
+            ui(self.label.get_style_context().add_class, "activity-text")
         else:
-            self.root.get_style_context().remove_class("active-row")
-            self.label.get_style_context().remove_class("activity-text")
+            ui(self.root.get_style_context().remove_class, "active-row")
+            ui(self.label.get_style_context().remove_class, "activity-text")
 
     def show_conflict(self):
         self.conflict.set_markup("<span foreground='#f39c12' weight='bold' size='small'>⚠ Overwrite</span>")
         self.conflict.show()
 
     def set_success(self):
+        self.status = "completed"
         self.progress.get_style_context().add_class("success-bar")
 
     def set_reorder_locked(self, locked):
@@ -301,6 +306,9 @@ class FileRow:
         
         # Color the compression percent based on performance
         color = "#2ec27e" if compression_pct > 0 else "#e01b24"
+        
+        # Ensure status is updated thread-safely if called from thread
+        self.status = "completed"
         
         markup = (
             f"<span size='large' foreground='#2ec27e'><b>Completed in {utils.format_time(elapsed_time)}</b></span>\n"
