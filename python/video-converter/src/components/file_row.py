@@ -100,11 +100,12 @@ class FileRow:
         # Filename - 20ch limit
         fname = os.path.basename(path_str)
         self.label = Gtk.Label(label=fname, xalign=0)
-        self.label.set_ellipsize(Pango.EllipsizeMode.MIDDLE)
-        self.label.set_width_chars(20)
-        self.label.set_max_width_chars(20)
+        self.label.set_ellipsize(Pango.EllipsizeMode.END)
+        self.label.set_max_width_chars(15)
+        self.label.set_line_wrap(True)
+        self.label.set_lines(2)
         self.label.get_style_context().add_class("font-bold")
-        top_line.pack_start(self.label, False, False, 0)
+        top_line.pack_start(self.label, True, True, 0)
 
         # Conflict Warning
         self.conflict = Gtk.Label()
