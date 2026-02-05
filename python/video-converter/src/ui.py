@@ -41,6 +41,7 @@ class VideoConverter(Gtk.Window):
 
         self._init_ui()
         self._init_shortcuts()
+        self.connect("size-allocate", self._on_size_allocate)
 
         # Initialize managers AFTER UI is created
         self.prefs_manager = PrefsManager(self)
@@ -68,8 +69,37 @@ class VideoConverter(Gtk.Window):
         pitch = self.theme_switch.get_active()
         self.theme_label.set_text("Black" if pitch else "Gray")
 
+    def _on_size_allocate(self, widget, allocation):
+        """Adapt layout based on window width."""
+        width = allocation.width
+        
+        # 1. Update Scaling Classes
+        ctx = self.get_style_context()
+        if width < 550:
+            if not ctx.has_class("narrow-ui"):
+                ctx.add_class("narrow-ui")
+                ctx.remove_class("compact-ui")
+        elif width < 800:
+            if not ctx.has_class("compact-ui"):
+                ctx.add_class("compact-ui")
+                ctx.remove_class("narrow-ui")
+        else:
+            ctx.remove_class("compact-ui")
+            ctx.remove_class("narrow-ui")
+
+        # 2. Update Layout Orientation - Keep side-by-side for tiling setups
+        is_vertical = width < 450
+        target_orient = Gtk.Orientation.VERTICAL if is_vertical else Gtk.Orientation.HORIZONTAL
+        
+        if hasattr(self, 'main_hbox') and self.main_hbox.get_orientation() != target_orient:
+            self.main_hbox.set_orientation(target_orient)
+            if hasattr(self, 'sidebar_revealer'):
+                tt = Gtk.RevealerTransitionType.SLIDE_DOWN if is_vertical else Gtk.RevealerTransitionType.SLIDE_RIGHT
+                self.sidebar_revealer.set_transition_type(tt)
+            self.main_hbox.show_all()
+
     def on_quit_attempt(self, widget, event):
-        if self.conversion_manager.ffmpeg_process:
+        if self.conversion_manager.active_rows:
             dialog = Gtk.MessageDialog(
                 transient_for=self,
                 flags=0,
@@ -85,6 +115,8 @@ class VideoConverter(Gtk.Window):
             return True
         Gtk.main_quit()
         return False
+
+        return False  # Allow quit
 
     def cleanup(self):
         self.prefs_manager.save_prefs()
@@ -122,7 +154,7 @@ class VideoConverter(Gtk.Window):
         if event.keyval in [Gdk.KEY_Return, Gdk.KEY_KP_Enter] and (
             event.state & Gdk.ModifierType.CONTROL_MASK
         ):
-            if self.file_manager.files and not self.conversion_manager.ffmpeg_process:
+            if self.file_manager.files and not self.conversion_manager.active_rows:
                 self.conversion_manager.start_encoding()
             return True
         return False
@@ -262,3 +294,5 @@ class VideoConverter(Gtk.Window):
     def _update_pitch_black_css(self, enabled):
         """Delegate to theme manager."""
         theme_manager.update_pitch_black_css(self, enabled)
+
+

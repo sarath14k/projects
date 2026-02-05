@@ -43,6 +43,9 @@ class FileManager:
             if Path(out_path_str).exists():
                 row.show_conflict()
 
+        if paths:
+            self.window.last_folder = str(Path(paths[0]).parent)
+
         self.window.file_list_box.show_all()
         self.window._update_empty_state()
         self.window.start_btn.set_sensitive(bool(self.files))
@@ -62,14 +65,52 @@ class FileManager:
             self.window.start_btn.set_sensitive(bool(self.files))
             self.window.open_out_btn.set_sensitive(bool(self.files))
 
-    def clear_all(self):
-        # Get the currently encoding file ID from conversion_manager if any
-        current_id = None
-        if hasattr(self.window, "conversion_manager") and self.window.conversion_manager.current_file_row:
-            current_id = self.window.conversion_manager.current_file_row.id
+    def remove_selected(self):
+        """Remove only the currently selected rows."""
+        selected_rows = self.window.file_list_box.get_selected_rows()
+        if not selected_rows:
+            return
 
-        # Remove all files except the currently encoding one
-        files_to_remove = [fid for fid in self.files.keys() if fid != current_id]
+        # Get encoding ids to protect them
+        active_ids = set()
+        if hasattr(self.window, "conversion_manager"):
+            active_ids = {row.id for row in self.window.conversion_manager.active_rows}
+
+        removed_any = False
+        for row_container in selected_rows:
+            # Find which fid this container belongs to
+            fid_to_rem = None
+            for fid, row in self.files.items():
+                if row.root.get_parent() == row_container:
+                    fid_to_rem = fid
+                    break
+            
+            if fid_to_rem and fid_to_rem not in active_ids:
+                self.window.file_list_box.remove(row_container)
+                del self.files[fid_to_rem]
+                if fid_to_rem in self.order:
+                    self.order.remove(fid_to_rem)
+                removed_any = True
+        
+        if removed_any:
+            self.window._update_empty_state()
+            self.window.start_btn.set_sensitive(bool(self.files))
+            self.window.open_out_btn.set_sensitive(bool(self.files))
+
+    def clear_all(self):
+        # If there are selected rows, treat this as 'Remove Selected'
+        selected = self.window.file_list_box.get_selected_rows()
+        if selected:
+            self.remove_selected()
+            return
+
+        # Get the currently encoding file IDs from conversion_manager if any
+        active_ids = set()
+        if hasattr(self.window, "conversion_manager"):
+            active_ids = {row.id for row in self.window.conversion_manager.active_rows}
+
+        # Remove all files except the currently encoding ones
+        files_to_remove = [fid for fid in self.files.keys() if fid not in active_ids]
         for fid in files_to_remove:
             row = self.files[fid]
             row_container = row.root.get_parent()
@@ -81,6 +122,7 @@ class FileManager:
         # If the list is truly empty (nothing was encoding), clear status labels
         if not self.files:
             self.window.queue_status.set_markup("Ready.")
+            ui(self.window.global_progress.set_visible, False)
 
         self.window._update_empty_state()
         self.window.start_btn.set_sensitive(bool(self.files))

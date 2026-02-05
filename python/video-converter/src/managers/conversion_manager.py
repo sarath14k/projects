@@ -23,129 +23,252 @@ class ConversionManager:
     def __init__(self, window):
         self.window = window
         self.stop_requested = False
-        self.paused = False
-        self.ffmpeg_process = None
-        self.current_file_row = None
+        self.global_paused = False
+        self.active_rows = []
+        self.max_workers = 1 # Process 1 at a time as requested
         self.sleep_inhibitor = SleepInhibitor()
-        self.queue_status = window.queue_status # Reference to label
+        self.queue_status = window.queue_status
+        self.lock = threading.Lock()
+        self.task_stats = {} # row -> {pct, speed, rem, bitrate}
+        self.last_ui_update = 0
 
     def start_encoding(self):
-        self.stop_requested = False
-        self.paused = False
-        self.window.start_btn.set_visible(False)
-        self.window.stop_btn.set_visible(True)
-        self.window.stop_btn.set_sensitive(True)
-        self.window.pause_btn.set_visible(True)
-        self.window.pause_btn.set_sensitive(True)
-        self.window.add_btn.set_sensitive(True)
-        self.window.open_out_btn.set_sensitive(False)
+        print("ConversionManager: start_encoding called", flush=True)
+        with self.lock:
+            self.stop_requested = False
+            self.global_paused = False
+            self.window.start_btn.set_visible(False)
+            self.window.stop_btn.set_visible(True)
+            self.window.stop_btn.set_sensitive(True)
+            self.window.pause_btn.set_visible(True)
+            self.window.pause_btn.set_sensitive(True)
+            self.window.open_out_btn.set_sensitive(False)
+            ui(self.window.global_progress.set_visible, True)
+            ui(self.window.global_progress.set_fraction, 0)
+
+            # Show controls for all pending/future rows
+            for row in self.window.file_manager.files.values():
+                if row.status == "pending":
+                    ui(row.pause_row_btn.set_visible, True)
+                    ui(row.stop_row_btn.set_visible, True)
 
         self.sleep_inhibitor.start()
 
-        # Start Thread
-        t = threading.Thread(target=self._run_queue, daemon=True)
+        # Start Supervisor Thread
+        t = threading.Thread(target=self._supervisor_loop, daemon=True)
         t.start()
 
     def stop_encoding(self):
-        self.stop_requested = True
-        self.current_file_row = None
-        if self.ffmpeg_process:
-            try:
-                self.ffmpeg_process.terminate()
-                # Give it a moment, then force kill if still running
-                try:
-                    self.ffmpeg_process.wait(timeout=0.5)
-                except:
-                    self.ffmpeg_process.kill()  # Force kill
-            except:
-                pass
-            self.ffmpeg_process = None
+        with self.lock:
+            self.stop_requested = True
+            # Stop all active processes
+            for row in self.active_rows:
+                if row.ffmpeg_process:
+                    try:
+                        row.ffmpeg_process.terminate()
+                    except:
+                        pass
+            self.active_rows.clear()
 
         self.window.stop_btn.set_sensitive(False)
         self.window.pause_btn.set_sensitive(False)
-        self.queue_status.set_text("Stopped")
-
-        # Cancel any running countdown (auto-close/shutdown)
+        ui(self.queue_status.set_text, "Stopped")
         self.window.cancel_countdown()
 
-        # Re-enable buttons
         self.window.start_btn.set_visible(True)
         self.window.stop_btn.set_visible(False)
         self.window.pause_btn.set_visible(False)
-        self.window.add_btn.set_sensitive(True)
+        ui(self.window.global_progress.set_visible, False)
 
-        # Re-enable row remove buttons
         for row in self.window.file_manager.files.values():
-            row.remove_btn.set_sensitive(True)
+            if row.status in ["pending", "processing"]:
+                ui(row.remove_btn.set_sensitive, True)
+                ui(row.pause_row_btn.set_visible, False)
+                ui(row.stop_row_btn.set_visible, False)
 
     def pause_resume(self):
-        self.paused = not self.paused
-        if self.paused:
-            if self.ffmpeg_process:
-                os.kill(self.ffmpeg_process.pid, signal.SIGSTOP)
-            self.window.pause_btn.set_image(Gtk.Image.new_from_icon_name("media-playback-start-symbolic", Gtk.IconSize.BUTTON))
-            self.queue_status.set_text("Paused")
-        else:
-            if self.ffmpeg_process:
-                os.kill(self.ffmpeg_process.pid, signal.SIGCONT)
-            self.window.pause_btn.set_image(Gtk.Image.new_from_icon_name("media-playback-pause-symbolic", Gtk.IconSize.BUTTON))
-            self.queue_status.set_text("Processing...")
-
-    def _run_queue(self):
-        while not self.stop_requested:
-            file_list = self.window.file_manager.get_file_list()
+        """Global pause/resume toggle."""
+        with self.lock:
+            self.global_paused = not self.global_paused
+            state = self.global_paused
             
-            # Find the first pending file
-            row = None
-            current_index = -1
-            for i, r in enumerate(file_list):
-                if r.status == "pending":
-                    row = r
-                    current_index = i
-                    break
-            
-            if row is None:
-                # No more pending files
-                break
+            icon = "media-playback-start-symbolic" if state else "media-playback-pause-symbolic"
+            self.window.pause_btn.set_image(Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.BUTTON))
+            ui(self.queue_status.set_text, "Paused" if state else "Processing...")
 
-            total = len(file_list)
-            self.current_file_row = row
-            path = row.path
+            for row in self.active_rows:
+                self.pause_resume_row(row, force_state=state)
 
-            ui(row.set_active, True)
-            ui(row.set_reorder_locked, True)
-            ui(row.remove_btn.set_sensitive, False)
-            ui(self.queue_status.set_text, f"Processing {current_index + 1} of {total}...")
-
-            ui(setattr, row, "status", "processing")
-            result = self._encode_file(row, current_index)
-
-            ui(row.set_active, False)
-            ui(row.set_reorder_locked, False)
-            ui(row.remove_btn.set_sensitive, True)
-            
-            if result is not None:
-                elapsed, init_size, init_size_str = result
-                ui(row.set_success)
-                from .. import utils
-                final_size = utils.get_file_size(row.out_path)
-                final_size_str = utils.human_readable_size(final_size)
-                
-                # Calculate compression percentage
-                diff = init_size - final_size
-                compression_pct = (diff / init_size * 100) if init_size > 0 else 0
-                
-                ui(row.set_finished, elapsed, init_size_str, final_size_str, compression_pct)
-                ui(row.play_btn.set_visible, True)
+    def pause_resume_row(self, row, force_state=None):
+        """Toggle pause for a specific row."""
+        with self.lock:
+            if force_state is not None:
+                row.paused = force_state
             else:
-                # If it failed or was stopped, it shouldn't be "pending" anymore if we want to skip it, 
-                # but if stopped we might want to resume. 
-                # For now, if result is None and not stop_requested, mark as error.
-                if not self.stop_requested:
-                    ui(setattr, row, "status", "failed")
+                row.paused = not row.paused
+            
+            if row.ffmpeg_process:
+                try:
+                    os.kill(row.ffmpeg_process.pid, signal.SIGSTOP if row.paused else signal.SIGCONT)
+                except:
+                    pass
+            
+            icon = "media-playback-start-symbolic" if row.paused else "media-playback-pause-symbolic"
+            ui(row.pause_row_btn.set_image, Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.BUTTON))
+
+    def stop_row(self, row):
+        """Stop/Cancel a specific row."""
+        with self.lock:
+            if row in self.active_rows:
+                if row.ffmpeg_process:
+                    try:
+                        row.ffmpeg_process.terminate()
+                    except:
+                        pass
+            elif row.status == "pending":
+                # Mark as failed/cancelled so supervisor skips it
+                row.status = "failed"
+                ui(row.info.set_text, "Cancelled")
+                ui(row.pause_row_btn.set_visible, False)
+                ui(row.stop_row_btn.set_visible, False)
+                ui(row.remove_btn.set_visible, True)
+
+    def _supervisor_loop(self):
+        while not self.stop_requested:
+            try:
+                file_list = self.window.file_manager.get_file_list()
+                pending = [r for r in file_list if r.status == "pending"]
+                print(f"ConversionManager: Loop - Pending: {len(pending)}, Active: {len(self.active_rows)}", flush=True)
+                
+                if not pending and not self.active_rows:
+                    print("ConversionManager: No work left, stopping loop.", flush=True)
+                    break
+                
+                # Fill active tasks up to max_workers
+                with self.lock:
+                    while len(self.active_rows) < self.max_workers and pending:
+                        row = pending.pop(0)
+                        row.status = "processing"
+                        self.active_rows.append(row)
+                        # Start worker thread for this row
+                        try:
+                            idx = file_list.index(row)
+                            threading.Thread(target=self._encode_worker, args=(row, idx), daemon=True).start()
+                        except Exception as e:
+                            print(f"Failed to start worker: {e}", flush=True)
+                            row.status = "failed"
+                            if row in self.active_rows: self.active_rows.remove(row)
+            except Exception as e:
+                print(f"Supervisor loop error: {e}", flush=True)
+            
+            time.sleep(1)
 
         self.sleep_inhibitor.stop()
         ui(self._on_queue_finished)
+
+    def _update_global_status(self, row, pct, fps, speed, bitrate, rem):
+        """Called by workers to sync global UI with Total ETA."""
+        with self.lock:
+            self.task_stats[row] = {
+                'pct': pct,
+                'speed': speed,
+                'rem': rem,
+                'bitrate': bitrate
+            }
+            
+            now = time.time()
+            if now - self.last_ui_update < 0.2:
+                return
+            self.last_ui_update = now
+
+        file_dict = self.window.file_manager.files
+        total_files = len(file_dict)
+        if total_files == 0: return
+
+        # 1. Collective Progress
+        sum_pct = 0
+        active_rem_list = []
+        avg_speed_sum = 0
+        active_count = 0
+        
+        for r in file_dict.values():
+            if r.status == "success":
+                sum_pct += 1.0
+            elif r in self.task_stats:
+                stat = self.task_stats[r]
+                sum_pct += stat['pct']
+                active_rem_list.append(stat['rem'])
+                avg_speed_sum += stat['speed']
+                active_count += 1
+        
+        ui(self.window.global_progress.set_fraction, min(sum_pct / total_files, 1.0))
+
+        # 2. Total ETA
+        current_batch_rem = max(active_rem_list) if active_rem_list else 0
+        pending_files = [r for r in file_dict.values() if r.status == "pending"]
+        pending_dur = sum(r.duration for r in pending_files if r.duration)
+        
+        avg_speed = (avg_speed_sum / active_count) if active_count > 0 else 1.0
+        effective_workers = min(self.max_workers, active_count + len(pending_files))
+        pending_eta = (pending_dur / (effective_workers * avg_speed)) if (effective_workers > 0 and avg_speed > 0) else 0
+        
+        total_eta = current_batch_rem + pending_eta
+
+        # 3. Markup
+        markup = (
+            f"<span size='medium' weight='bold' foreground='#ffb74d'>Total ETA: {utils.format_time(total_eta)}</span>\n"
+            f"<span size='medium' weight='bold' foreground='#2ec27e'>Active: {active_count} | Speed: {avg_speed_sum:.1f}x</span>"
+        )
+        ui(self.queue_status.set_markup, markup)
+
+    def _encode_worker(self, row, current_index):
+        print(f"DEBUG: Worker for index {current_index} entered", flush=True)
+        try:
+            print(f"DEBUG: Updating UI for row {current_index}", flush=True)
+            ui(row.set_active, True)
+            ui(row.set_reorder_locked, True)
+            ui(row.remove_btn.set_sensitive, False)
+            
+            # Ensure controls are visible
+            ui(row.pause_row_btn.set_visible, True)
+            ui(row.stop_row_btn.set_visible, True)
+
+            result = self._encode_file(row, current_index)
+
+            with self.lock:
+                if row in self.active_rows:
+                    self.active_rows.remove(row)
+                if row in self.task_stats:
+                    del self.task_stats[row]
+                
+                ui(row.set_active, False)
+                ui(row.set_reorder_locked, False)
+                ui(row.remove_btn.set_sensitive, True)
+                ui(row.pause_row_btn.set_visible, False)
+                ui(row.stop_row_btn.set_visible, False)
+
+                if result is not None:
+                    elapsed, init_size, init_size_str = result
+                    ui(row.set_success)
+                    from .. import utils
+                    final_size = utils.get_file_size(row.out_path)
+                    final_size_str = utils.human_readable_size(final_size)
+                    diff = init_size - final_size
+                    compression_pct = (diff / init_size * 100) if init_size > 0 else 0
+                    ui(row.set_finished, elapsed, init_size_str, final_size_str, compression_pct)
+                    ui(row.play_btn.set_visible, True)
+                else:
+                    if not self.stop_requested:
+                        row.status = "failed"
+                        ui(row.info.set_text, "Failed or Stopped")
+        except Exception as e:
+            print(f"Encode worker crashed: {e}")
+            row.log_data.append(f"Worker Crash Error: {e}")
+            row.status = "failed"
+            if row in self.active_rows:
+                with self.lock: self.active_rows.remove(row)
+            ui(row.info.set_text, "Worker Error")
+            ui(row.log_btn.set_visible, True)
 
     def _encode_file(self, row, current_index):
         # Resolve parameters from row.params
@@ -163,7 +286,9 @@ class ConversionManager:
         params["quality"] = q_map.get(p.get("quality_text"), 23 if "CPU" not in codec_key else 6)
 
         # Get video info
+        print(f"DEBUG: Getting video info for {row.path}", flush=True)
         duration, fps, input_codec, src_bitrate, width = utils.get_video_info(row.path)
+        print(f"DEBUG: Info - Dur: {duration}, FPS: {fps}, Codec: {input_codec}", flush=True)
 
         # Calculate target and max bitrate (bits/s to match FFmpeg expectation)
         quality_val = params["quality"]
@@ -217,80 +342,51 @@ class ConversionManager:
 
         row.log_data = [] # Reset log
         row.log_data.append(f"Command: {' '.join(cmd)}\n")
+        print(f"Starting FFmpeg: {' '.join(cmd)}", flush=True)
         ui(row.log_btn.set_visible, True)
 
         try:
+            print("DEBUG: Calling subprocess.Popen", flush=True)
             start_time = time.time()
-            self.ffmpeg_process = subprocess.Popen(
+            row.ffmpeg_process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.DEVNULL, # Match original C++ logic
-                stderr=subprocess.PIPE,    # Progress info via pipe:2
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
                 stdin=subprocess.DEVNULL,
                 universal_newlines=True,
                 bufsize=1
             )
 
-            # Pre-calculate file size and total pending duration for efficiency
             init_size = utils.get_file_size(row.path)
             init_size_str = utils.human_readable_size(init_size)
             
-            # Sum durations of all pending files in the queue
-            def _get_pending_dur():
-                flist = self.window.file_manager.get_file_list()
-                return sum(r.duration for r in flist[current_index+1:] if r.duration)
-            
-            pending_dur = _get_pending_dur()
-            last_dur_check = time.time()
-
-            last_ui_update = 0
-            # iterate directly over stderr for maximum efficiency (no busy-waiting)
-            for line in self.ffmpeg_process.stderr:
-                if self.stop_requested:
-                    self.ffmpeg_process.terminate()
+            for line in row.ffmpeg_process.stderr:
+                print(f"FFMPEG_OUT: {line.strip()}", flush=True)
+                if self.stop_requested or row.status == "failed":
+                    row.ffmpeg_process.terminate()
                     break
 
-                # Update UI periodically to reduce Gtk thread overhead
                 progress = parser.parse(line)
-                now = time.time()
 
                 if progress:
-                    if now - last_ui_update > 0.1: # Max 10 updates/sec
-                        last_ui_update = now
-                        pct, fps, speed, bitrate, rem = progress
-                        # Calculate additional required parameters
-                        # Calculate total queue ETA
-                        q_rem = rem
-                        effective_speed = speed if speed > 0.1 else 1.0
+                    pct, fps, speed, bitrate, rem = progress
+                    
+                    # Update row UI
+                    q_rem = rem # Per-row ETA
+                    current_out_size = utils.get_file_size(row.out_path)
+                    est_size = int(current_out_size / pct) if pct > 0.05 else 0
+                    est_size_str = utils.human_readable_size(est_size) if est_size > 0 else "..."
+                    ui(row.update_progress, pct, fps, speed, bitrate, rem, q_rem, init_size_str, est_size_str)
 
-                        # Add estimated time for pending files
-                        # Re-calculate pending duration only every few seconds or if it's 0
-                        now_dur = time.time()
-                        if now_dur - last_dur_check > 2.0:
-                            pending_dur = _get_pending_dur()
-                            last_dur_check = now_dur
-                            
-                        q_rem += pending_dur / effective_speed
-                        # Calculate accurate estimated final size based on current output size
-                        current_out_size = utils.get_file_size(row.out_path)
-                        est_size = int(current_out_size / pct) if pct > 0.05 else 0 # Wait for 5% progress for stability
-                        est_size_str = utils.human_readable_size(est_size) if est_size > 0 else "..."
-                        ui(row.update_progress, pct, fps, speed, bitrate, rem, q_rem, init_size_str, est_size_str)
-
-                        # Update Queue Status
-                        bitrate_str = f"{bitrate:.0f} kbps" if bitrate > 0 else "N/A"
-                        markup = (
-                            f"<span size='medium' weight='bold' foreground='#ffb74d'>Queue ETA: {utils.format_time(q_rem)}</span>\n"
-                            f"<span size='medium' weight='bold' foreground='#2ec27e'>Bitrate: {bitrate_str}</span>"
-                        )
-                        ui(self.queue_status.set_markup, markup)
+                    # Update Global UI
+                    self._update_global_status(row, pct, fps, speed, bitrate, rem)
                 else:
-                    # Only log lines that are actual output/errors, not progress lines
                     row.log_data.append(line.strip())
 
-            self.ffmpeg_process.wait()
+            row.ffmpeg_process.wait()
             elapsed = time.time() - start_time
-            return_code = self.ffmpeg_process.returncode
-            self.ffmpeg_process = None
+            return_code = row.ffmpeg_process.returncode
+            row.ffmpeg_process = None
 
             if return_code == 0 and not self.stop_requested:
                 ui(self.window._handle_source_action, str(row.path))
@@ -306,14 +402,14 @@ class ConversionManager:
         self.window.start_btn.set_visible(True)
         self.window.stop_btn.set_visible(False)
         self.window.pause_btn.set_visible(False)
-        self.window.add_btn.set_sensitive(True)
         self.window.open_out_btn.set_sensitive(True)
-        self.window.queue_status.set_text("Idle")
+        ui(self.window.queue_status.set_text, "Idle")
+        ui(self.window.global_progress.set_visible, False)
 
         # Re-enable remove and unlock all reorders
         for row in self.window.file_manager.files.values():
-            row.remove_btn.set_sensitive(True)
-            row.set_reorder_locked(False)
+            ui(row.remove_btn.set_sensitive, True)
+            ui(row.set_reorder_locked, False)
 
         # Completion Action
-        self.window._handle_completion()
+        ui(self.window._handle_completion)

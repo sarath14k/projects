@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from ..config import *
 
@@ -42,10 +43,8 @@ class PrefsManager:
                 self.window.after_complete.set_active(self.config["after_complete"])
             if "gpu_device" in self.config:
                 self.window.gpu_device.set_active(self.config["gpu_device"])
-            if "compression_level" in self.config:
-                self.window.compression_level.set_active(self.config["compression_level"])
-        except:
-            pass
+        except Exception as e:
+            print(f"Restore UI field failed: {e}")
 
         # Restore path
         self.window.last_folder = self.config.get("last_folder", str(Path.home()))
@@ -74,7 +73,6 @@ class PrefsManager:
             "after_complete": self.window.after_complete.get_active(),
             "last_folder": self.window.last_folder,
             "gpu_device": self.window.gpu_device.get_active(),
-            "compression_level": self.window.compression_level.get_active(),
             "pitch_black": self.window.theme_switch.get_active(),
             "last_output_dir": self.window.last_output_dir,
         }

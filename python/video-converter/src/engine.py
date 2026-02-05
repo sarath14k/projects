@@ -57,7 +57,7 @@ def build_ffmpeg_command(
                     "-hwaccel_output_format",
                     "vaapi",
                     "-extra_hw_frames",
-                    "256",
+                    "32",
                 ]
             )
 
@@ -119,7 +119,7 @@ def build_ffmpeg_command(
         else:
             cmd.extend(["-compression_level", str(compression_level)])
             depth = (
-                8 if compression_level <= 2 else (6 if compression_level <= 4 else 4)
+                4 if compression_level <= 2 else (3 if compression_level <= 4 else 2)
             )
             cmd.extend(["-async_depth", str(depth)])
 

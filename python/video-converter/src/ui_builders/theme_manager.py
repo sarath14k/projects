@@ -45,15 +45,8 @@ def update_pitch_black_css(window, enabled):
         window.pitch_black_provider = Gtk.CssProvider()
         window.pitch_black_provider.load_from_data(PITCH_BLACK_CSS.encode("utf-8"))
 
-    # Revert dynamic switching: ensure button always has the right icon if needed
-    if not enabled:
-         # Ensure we are back to symbolic if we were in pitch black
-         image = window.add_btn.get_image()
-         if isinstance(image, Gtk.Image):
-              image.set_from_icon_name("list-add-symbolic", Gtk.IconSize.BUTTON)
-         else:
-              window.add_btn.set_image(Gtk.Image.new_from_icon_name("list-add-symbolic", Gtk.IconSize.BUTTON))
-
+    # The add_btn was removed in favor of the FAB. No icon update needed here.
+    
     screen = Gdk.Screen.get_default()
     if enabled:
         Gtk.StyleContext.add_provider_for_screen(

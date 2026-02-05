@@ -18,7 +18,7 @@ STANDARD_CSS = """
 
     .dim-label {
         opacity: 0.6;
-        font-size: 11px;
+        font-size: 9px;
         margin-bottom: 2px;
         font-weight: 600;
         letter-spacing: 0.5px;
@@ -27,6 +27,35 @@ STANDARD_CSS = """
     .sidebar-bg {
         background-color: alpha(#000000, 0.1);
         border-right: 1px solid alpha(#ffffff, 0.05);
+        min-width: 200px;
+    }
+
+    /* Responsive Scaling */
+    .compact-ui label, .compact-ui combobox *, .compact-ui button label { font-size: 10px; }
+    .compact-ui .dim-label { font-size: 9px; }
+    .compact-ui .font-bold { font-size: 10px; }
+    .compact-ui button { min-height: 28px; padding: 0 6px; }
+    .compact-ui combobox { min-height: 28px; }
+    .compact-ui .sidebar-bg { min-width: 160px; }
+
+    .narrow-ui label, .narrow-ui combobox *, .narrow-ui button label { font-size: 9px; }
+    .narrow-ui .dim-label { font-size: 8px; }
+    .narrow-ui .font-bold { font-size: 9px; }
+    .narrow-ui button { min-height: 24px; padding: 0 4px; }
+    .narrow-ui combobox { min-height: 24px; }
+    .narrow-ui .sidebar-bg { min-width: 130px; }
+    .narrow-ui .row-card { padding: 4px; }
+
+
+    .main-gutter {
+        padding: 20px;
+    }
+
+    .compact-ui .main-gutter { padding: 12px; }
+    .narrow-ui .main-gutter { padding: 6px; }
+
+    .font-bold {
+        font-weight: bold;
     }
 
     .row-card {
@@ -42,19 +71,33 @@ STANDARD_CSS = """
         box-shadow: 0 4px 12px rgba(0,0,0,0.25);
     }
 
-    .file-list { background: transparent; }
-    .file-list row {
-        padding-bottom: 12px;
+    .file-list { 
         background: transparent;
-        margin-left: 4px;
-        margin-right: 4px;
+        padding: 4px; /* Give some room for shadows/selection outlines */
     }
-    .file-list row:last-child { padding-bottom: 0; }
+    .file-list row {
+        padding-bottom: 8px; /* Slightly tighter spacing for modern look */
+        background: transparent;
+        margin: 2px 4px;
+        border-radius: 16px; /* Match card radius for selection highlight */
+    }
+    .file-list row:selected {
+        background-color: alpha(@accent_color, 0.12);
+        outline: 2px solid alpha(@accent_color, 0.5);
+        outline-offset: -2px;
+    }
     .file-list row:hover { background: transparent; }
+ 
+    .main-area, .main-area scrolledwindow, .main-area viewport, .main-area list, .main-area stack, .main-area listbox, .main-area listrow {
+        background-color: transparent;
+        background-image: none;
+        box-shadow: none;
+    }
 
     .active-row .row-card {
         border: 1px solid @accent_color;
-        background-color: alpha(@accent_color, 0.08);
+        background-color: alpha(@accent_color, 0.05);
+        box-shadow: 0 0 15px alpha(@accent_color, 0.15);
     }
 
     .thumbnail {
@@ -144,6 +187,15 @@ STANDARD_CSS = """
         border-radius: 3px;
         background-color: @accent_color;
     }
+    .small-row-btn {
+        min-height: 28px;
+        min-width: 28px;
+        padding: 0 4px;
+        border-radius: 6px;
+    }
+    .small-row-btn image {
+         -gtk-icon-transform: scale(0.7);
+    }
 
 """
 
@@ -168,16 +220,53 @@ PITCH_BLACK_CSS = """
         font-family: "Inter", "Roboto", "Segoe UI", "Cantarell", "Ubuntu", sans-serif;
     }
 
-    window, .background, headerbar, list, treeview, textview, eventbox, scrolledwindow, viewport, box {
+    window, .background, headerbar, list, treeview, textview, eventbox, scrolledwindow, viewport {
         background-color: @bg_color;
         background-image: none;
         border-color: @border_color;
         color: @fg_color;
     }
+    
+    box { background-color: transparent; } /* Default boxes to transparent */
+ 
+    .main-area, .main-area scrolledwindow, .main-area viewport, .main-area list, .main-area stack, .main-area listbox, .main-area listrow {
+        background-color: transparent;
+        background-image: none;
+        box-shadow: none;
+    }
 
     .sidebar-bg {
         background-color: @bg_color;
         border-right: none;
+        min-width: 200px;
+    }
+
+    /* Responsive Scaling */
+    .compact-ui label, .compact-ui combobox *, .compact-ui button label { font-size: 10px; }
+    .compact-ui .dim-label { font-size: 9px; }
+    .compact-ui .font-bold { font-size: 10px; }
+    .compact-ui button { min-height: 28px; padding: 0 6px; }
+    .compact-ui combobox { min-height: 28px; }
+    .compact-ui .sidebar-bg { min-width: 160px; }
+
+    .narrow-ui label, .narrow-ui combobox *, .narrow-ui button label { font-size: 9px; }
+    .narrow-ui .dim-label { font-size: 8px; }
+    .narrow-ui .font-bold { font-size: 9px; }
+    .narrow-ui button { min-height: 24px; padding: 0 4px; }
+    .narrow-ui combobox { min-height: 24px; }
+    .narrow-ui .sidebar-bg { min-width: 130px; }
+    .narrow-ui .row-card { padding: 4px; }
+
+
+    .main-gutter {
+        padding: 20px;
+    }
+
+    .compact-ui .main-gutter { padding: 12px; }
+    .narrow-ui .main-gutter { padding: 6px; }
+
+    .font-bold {
+        font-weight: bold;
     }
 
     .row-card {
@@ -214,13 +303,20 @@ PITCH_BLACK_CSS = """
         border-color: @success_color;
         background-color: alpha(@success_color, 0.05);
     }
+    .file-list row:selected {
+        background-color: alpha(@accent_color, 0.15);
+        outline: 2px solid @accent_color;
+        outline-offset: -2px;
+    }
+    
     .active-row .row-card {
         border: 1px solid @accent_color;
-        background-color: alpha(@accent_color, 0.05);
+        background-color: alpha(@accent_color, 0.08);
+        box-shadow: 0 0 20px alpha(@accent_color, 0.2);
     }
 
     button:not(.suggested-action):not(.destructive-action):not(.flat-button) {
-        background-color: @card_bg;
+        background-color: #121212;
         background-image: none;
         border: none;
         box-shadow: none;
@@ -283,19 +379,67 @@ PITCH_BLACK_CSS = """
         background-color: #222222;
     }
 
-    .drag-active {
+    .glass-section {
+        background-color: alpha(@fg_color, 0.03);
+        border: 1px solid alpha(@fg_color, 0.05);
+        border-radius: 12px;
+        margin-bottom: 8px;
+    }
+
+    .accordion-header {
+        min-height: 48px;
+        padding: 0 12px;
+        background: transparent;
+        border: none;
+        border-radius: 8px;
+        transition: all 0.25s ease;
+    }
+    .accordion-header:hover {
+        background-color: alpha(@fg_color, 0.05);
+    }
+    .accordion-header label {
+        font-weight: 800;
+        font-size: 8px;
+        letter-spacing: 1px;
+        opacity: 0.8;
+    }
+
+    .fab-button {
+        background-color: @accent_color;
+        color: #000000;
+        border-radius: 50%;
+        min-width: 64px;
+        min-height: 64px;
+        box-shadow: 0 4px 16px rgba(46, 194, 126, 0.4);
+    }
+    .fab-button:hover {
+        background-color: @accent_hover;
+        box-shadow: 0 6px 20px rgba(46, 194, 126, 0.6);
+    }
+
+    .skeleton {
+        background-color: alpha(@fg_color, 0.05);
+        opacity: 0.6;
+    }
+    .skeleton-text {
+        min-width: 100px;
+        min-height: 12px;
+        border-radius: 4px;
+    }
+
+    .active-row .row-card {
         border: 2px solid @accent_color;
         background-color: alpha(@accent_color, 0.08);
-        border-radius: 16px;
+        box-shadow: 0 0 15px alpha(@accent_color, 0.3);
     }
-    
-    .drag-active box,
-    .drag-active image,
-    .drag-active label,
-    .drag-active * {
-        background-color: transparent;
-        background-image: none;
-        border: none;
-        box-shadow: none;
+    .small-row-btn {
+        min-height: 28px;
+        min-width: 28px;
+        padding: 0 4px;
+        border-radius: 6px;
+        background-color: alpha(#ffffff, 0.05);
+    }
+    .small-row-btn image {
+         -gtk-icon-transform: scale(0.7);
     }
 """

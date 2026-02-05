@@ -13,11 +13,12 @@ def build_main_area(window):
     main_hbox = window.main_hbox
 
     right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+    right_box.get_style_context().add_class("main-area")
     main_hbox.pack_start(right_box, True, True, 0)
 
     # Top controls
     top_controls = Gtk.Box(spacing=16)
-    top_controls.set_border_width(20)
+    top_controls.get_style_context().add_class("main-gutter")
     top_controls.set_margin_bottom(0)
     right_box.pack_start(top_controls, False, False, 0)
 
@@ -29,15 +30,6 @@ def build_main_area(window):
     window.open_out_btn.set_tooltip_text("Open Output Folder")
     window.open_out_btn.connect("clicked", window.open_output_folder)
     top_controls.pack_start(window.open_out_btn, False, False, 0)
-
-    # Add files button
-    window.add_btn = Gtk.Button.new_from_icon_name(
-        "list-add-symbolic", Gtk.IconSize.BUTTON
-    )
-    window.add_btn.get_style_context().add_class("suggested-action")
-    window.add_btn.set_tooltip_text("Add Videos")
-    window.add_btn.connect("clicked", window.pick_files)
-    top_controls.pack_start(window.add_btn, False, False, 0)
 
     # Sort button (alphabetical)
     sort_btn = Gtk.Button.new_from_icon_name(
@@ -59,26 +51,58 @@ def build_main_area(window):
         Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0
     )
 
+    # Wrap the list area in an overlay for the FAB
+    overlay = Gtk.Overlay()
+    right_box.pack_start(overlay, True, True, 0)
+
     # Stack for empty state / file list
     window.stack = Gtk.Stack()
     window.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-    right_box.pack_start(window.stack, True, True, 0)
+    overlay.add(window.stack)
 
-    # Empty state
-    window.empty_state = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+    # FAB (Floating Action Button)
+    fab_box = Gtk.Box()
+    fab_box.set_halign(Gtk.Align.END)
+    fab_box.set_valign(Gtk.Align.END)
+    fab_box.set_margin_right(30)
+    fab_box.set_margin_bottom(30)
+    
+    window.fab_btn = Gtk.Button()
+    window.fab_btn.get_style_context().add_class("fab-button")
+    add_icon = Gtk.Image.new_from_icon_name("list-add-symbolic", Gtk.IconSize.DIALOG)
+    window.fab_btn.set_image(add_icon)
+    window.fab_btn.set_tooltip_text("Quick Add Videos")
+    window.fab_btn.connect("clicked", window.pick_files)
+    
+    fab_box.pack_start(window.fab_btn, False, False, 0)
+    overlay.add_overlay(fab_box)
+    overlay.show_all()
+
+    # Empty state - Enhance visuals
+    window.empty_state = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=32)
     window.empty_state.set_valign(Gtk.Align.CENTER)
     window.empty_state.set_halign(Gtk.Align.CENTER)
+    
     icon = Gtk.Image.new_from_icon_name(
         "video-x-generic-symbolic", Gtk.IconSize.DIALOG
     )
-    icon.set_pixel_size(96)
-    icon.set_opacity(0.3)
-    lbl = Gtk.Label()
-    lbl.set_markup(
-        "<span size='xx-large' weight='bold' foreground='#555555'>Drop Videos Here</span>"
+    icon.set_pixel_size(160)
+    icon.set_opacity(0.1)
+    
+    text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+    lbl_main = Gtk.Label()
+    lbl_main.set_markup(
+        "<span size='34000' weight='heavy' foreground='#666666'>Ready for Videos</span>"
     )
+    lbl_sub = Gtk.Label()
+    lbl_sub.set_markup(
+        "<span size='x-large' foreground='#555555'>Drag and drop or use the + button</span>"
+    )
+    text_box.pack_start(lbl_main, False, False, 0)
+    text_box.pack_start(lbl_sub, False, False, 0)
+
     window.empty_state.pack_start(icon, False, False, 0)
-    window.empty_state.pack_start(lbl, False, False, 0)
+    window.empty_state.pack_start(text_box, False, False, 0)
     window.stack.add_named(window.empty_state, "empty")
 
     # File list
@@ -86,7 +110,7 @@ def build_main_area(window):
     list_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 
     window.file_list_box = Gtk.ListBox()
-    window.file_list_box.set_selection_mode(Gtk.SelectionMode.NONE)
+    window.file_list_box.set_selection_mode(Gtk.SelectionMode.MULTIPLE)
     window.file_list_box.get_style_context().add_class("file-list")
 
     # Drag-and-drop for reordering AND adding files
@@ -107,7 +131,7 @@ def build_main_area(window):
     # Bottom controls
     controls_area = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
     controls_area.get_style_context().add_class("bottom-bar")
-    controls_area.set_border_width(20)
+    controls_area.get_style_context().add_class("main-gutter")
     right_box.pack_end(controls_area, False, False, 0)
     right_box.pack_end(
         Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0
@@ -119,8 +143,17 @@ def build_main_area(window):
     window.queue_status.set_justify(Gtk.Justification.LEFT)
     window.queue_status.set_xalign(0)
     window.queue_status.set_ellipsize(Pango.EllipsizeMode.END)
-    window.queue_status.set_max_width_chars(30)
-    controls_area.pack_start(window.queue_status, True, True, 0)
+    window.queue_status.set_max_width_chars(40)
+    
+    status_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+    status_box.pack_start(window.queue_status, False, False, 0)
+    
+    window.global_progress = Gtk.ProgressBar()
+    window.global_progress.set_visible(False)
+    window.global_progress.set_size_request(100, -1)
+    status_box.pack_start(window.global_progress, False, False, 0)
+    
+    controls_area.pack_start(status_box, True, True, 0)
 
     # Start button
     window.start_btn = Gtk.Button.new_from_icon_name(

@@ -28,6 +28,11 @@ class FileRow:
         "params",
         "settings_btn",
         "status",
+        "buttons_row",
+        "pause_row_btn",
+        "stop_row_btn",
+        "ffmpeg_process",
+        "paused",
     )
 
     def __init__(self, path_str, remove_cb, params=None, row_id=None):
@@ -39,6 +44,8 @@ class FileRow:
         self.status = "pending"
         self.log_data = collections.deque(maxlen=300)
         self.pulse_id = None
+        self.ffmpeg_process = None
+        self.paused = False
 
         # EventBox root for full-row dragging
         eb = Gtk.EventBox()
@@ -78,6 +85,7 @@ class FileRow:
         self.thumb.set_pixel_size(48)
         self.thumb.set_opacity(0.3)
         self.thumb.get_style_context().add_class("thumbnail")
+        self.thumb.get_style_context().add_class("skeleton")
         self.thumb.set_size_request(96, 54)
         hbox.pack_start(self.thumb, False, False, 0)
 
@@ -89,16 +97,14 @@ class FileRow:
         top_line = Gtk.Box(spacing=6)
         content_box.pack_start(top_line, False, False, 0)
 
-        # Filename - 2 lines max with middle ellipsis
+        # Filename - 20ch limit
         fname = os.path.basename(path_str)
         self.label = Gtk.Label(label=fname, xalign=0)
         self.label.set_ellipsize(Pango.EllipsizeMode.MIDDLE)
-        self.label.set_lines(2)
-        self.label.set_line_wrap(True)
-        self.label.set_line_wrap_mode(Pango.WrapMode.CHAR)
-        self.label.set_max_width_chars(30)
+        self.label.set_width_chars(20)
+        self.label.set_max_width_chars(20)
         self.label.get_style_context().add_class("font-bold")
-        top_line.pack_start(self.label, True, True, 0)
+        top_line.pack_start(self.label, False, False, 0)
 
         # Conflict Warning
         self.conflict = Gtk.Label()
@@ -109,7 +115,10 @@ class FileRow:
         # Info label
         self.info = Gtk.Label(label="Pending...", xalign=0)
         self.info.set_use_markup(True)
+        self.info.set_ellipsize(Pango.EllipsizeMode.END)
         self.info.get_style_context().add_class("dim-label")
+        self.info.get_style_context().add_class("skeleton")
+        self.info.get_style_context().add_class("skeleton-text")
         content_box.pack_start(self.info, False, False, 0)
 
         # Progress bar
@@ -117,38 +126,64 @@ class FileRow:
         self.progress.set_hexpand(True)
         content_box.pack_start(self.progress, False, False, 0)
 
-        # Action buttons on the right (vertically stacked)
-        action_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        action_box.set_valign(Gtk.Align.CENTER)
+        # Action buttons row (below progress bar)
+        self.buttons_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self.buttons_row.set_margin_top(4)
+        self.buttons_row.set_halign(Gtk.Align.START)
+        content_box.pack_start(self.buttons_row, False, False, 0)
+
+        # Settings button
+        self.settings_btn = Gtk.Button.new_from_icon_name("emblem-system-symbolic", Gtk.IconSize.BUTTON)
+        self.settings_btn.set_tooltip_text("File Settings")
+        self.settings_btn.get_style_context().add_class("small-row-btn")
+        self.settings_btn.connect("clicked", self.on_settings_clicked)
+        self.buttons_row.pack_start(self.settings_btn, False, False, 0)
 
         # Play button
         self.play_btn = Gtk.Button.new_from_icon_name("media-playback-start-symbolic", Gtk.IconSize.BUTTON)
         self.play_btn.set_no_show_all(True)
         self.play_btn.set_visible(False)
+        self.play_btn.set_tooltip_text("Open/Play Converted File")
+        self.play_btn.get_style_context().add_class("small-row-btn")
         self.play_btn.connect("clicked", self._on_play)
+        self.buttons_row.pack_start(self.play_btn, False, False, 0)
 
         # Log button
         self.log_btn = Gtk.Button.new_from_icon_name("dialog-warning-symbolic", Gtk.IconSize.BUTTON)
         self.log_btn.set_no_show_all(True)
         self.log_btn.set_visible(False)
         self.log_btn.get_style_context().add_class("destructive-action")
+        self.log_btn.get_style_context().add_class("small-row-btn")
+        self.log_btn.set_tooltip_text("View Conversion Log")
         self.log_btn.connect("clicked", self.show_log)
+        self.buttons_row.pack_start(self.log_btn, False, False, 0)
+
+        # Pause row button (only for active row)
+        self.pause_row_btn = Gtk.Button.new_from_icon_name("media-playback-pause-symbolic", Gtk.IconSize.BUTTON)
+        self.pause_row_btn.set_no_show_all(True)
+        self.pause_row_btn.set_visible(False)
+        self.pause_row_btn.set_tooltip_text("Pause/Resume this task")
+        self.pause_row_btn.get_style_context().add_class("small-row-btn")
+        self.pause_row_btn.connect("clicked", lambda _: self._on_pause_clicked())
+        self.buttons_row.pack_start(self.pause_row_btn, False, False, 0)
+
+        # Stop row button (for active or pending)
+        self.stop_row_btn = Gtk.Button.new_from_icon_name("media-playback-stop-symbolic", Gtk.IconSize.BUTTON)
+        self.stop_row_btn.set_no_show_all(True)
+        self.stop_row_btn.set_visible(False)
+        self.stop_row_btn.get_style_context().add_class("destructive-action")
+        self.stop_row_btn.get_style_context().add_class("small-row-btn")
+        self.stop_row_btn.set_tooltip_text("Stop/Cancel this task")
+        self.stop_row_btn.connect("clicked", lambda _: self._on_stop_clicked())
+        self.buttons_row.pack_start(self.stop_row_btn, False, False, 0)
 
         # Remove button
         self.remove_btn = Gtk.Button.new_from_icon_name("user-trash-symbolic", Gtk.IconSize.BUTTON)
         self.remove_btn.get_style_context().add_class("row-remove-btn")
+        self.remove_btn.get_style_context().add_class("small-row-btn")
+        self.remove_btn.set_tooltip_text("Remove from Queue")
         self.remove_btn.connect("clicked", lambda _: remove_cb(self.id))
-
-        # Settings button
-        self.settings_btn = Gtk.Button.new_from_icon_name("emblem-system-symbolic", Gtk.IconSize.BUTTON)
-        self.settings_btn.set_tooltip_text("File Settings")
-        self.settings_btn.connect("clicked", self.on_settings_clicked)
-
-        action_box.pack_start(self.settings_btn, False, False, 0)
-        action_box.pack_start(self.play_btn, False, False, 0)
-        action_box.pack_start(self.log_btn, False, False, 0)
-        action_box.pack_start(self.remove_btn, False, False, 0)
-        hbox.pack_end(action_box, False, False, 0)
+        self.buttons_row.pack_start(self.remove_btn, False, False, 0)
 
         if not is_audio:
             THUMB_POOL.submit(self._generate_thumb)
@@ -197,6 +232,7 @@ class FileRow:
             from .. import utils
             info = utils.get_video_info(str(self.path))
             self.duration = info[0]
+            ui(self._set_info, info)
 
             # Match original naming - use MD5 for cross-session stability
             h = hashlib.md5(str(self.path).encode()).hexdigest()
@@ -227,18 +263,42 @@ class FileRow:
         try:
             # Match the set_size_request(96, 54)
             pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 96, 54, True)
+            self.thumb.get_style_context().remove_class("skeleton")
             self.thumb.set_from_pixbuf(pix)
             self.thumb.set_opacity(1.0)
         except:
             pass
 
+    def _set_info(self, info):
+        dur, fps, codec, br, w = info
+        from .. import utils
+        dur_str = utils.format_time(dur)
+        br_str = utils.human_readable_size(br)
+        self.info.get_style_context().remove_class("skeleton")
+        self.info.get_style_context().remove_class("skeleton-text")
+        self.info.set_markup(f"<span alpha='70%'>{dur_str} • {codec} • {w}p • {br_str}/s</span>")
+
     def set_active(self, active):
         if active:
             ui(self.root.get_style_context().add_class, "active-row")
             ui(self.label.get_style_context().add_class, "activity-text")
+            ui(self.pause_row_btn.set_visible, True)
+            ui(self.stop_row_btn.set_visible, True)
         else:
             ui(self.root.get_style_context().remove_class, "active-row")
             ui(self.label.get_style_context().remove_class, "activity-text")
+            ui(self.pause_row_btn.set_visible, False)
+            ui(self.stop_row_btn.set_visible, False)
+
+    def _on_pause_clicked(self):
+        toplevel = self.root.get_toplevel()
+        if hasattr(toplevel, "conversion_manager"):
+            toplevel.conversion_manager.pause_resume_row(self)
+
+    def _on_stop_clicked(self):
+        toplevel = self.root.get_toplevel()
+        if hasattr(toplevel, "conversion_manager"):
+            toplevel.conversion_manager.stop_row(self)
 
     def show_conflict(self):
         self.conflict.set_markup("<span foreground='#f39c12' weight='bold' size='small'>⚠ Overwrite</span>")
@@ -295,7 +355,7 @@ class FileRow:
         from .. import utils
         markup = (
             f"<span size='large'><b>{int(pct * 100)}%</b> • <span foreground='#2ec27e'><b>{fps:.0f} fps</b></span> • <span foreground='#62a0ea'>x{speed:.1f}</span> • "
-            f"<span foreground='#ffb74d'><b>ETA: {utils.format_time(rem)}</b></span></span>\n"
+            f"<span foreground='#ffb74d'><b>ETA: {utils.format_time(rem)}</b></span>\n"
             f"<span size='medium' alpha='80%'>{init_size_str} ➝ <span foreground='#c061cb'>{est_size_str}</span></span>"
         )
         self.info.set_markup(markup)
