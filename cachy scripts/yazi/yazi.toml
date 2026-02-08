@@ -1,0 +1,16 @@
+# Yazi opener config
+# 'o' = mpv-share (Default)
+
+[opener]
+mpv-share = [
+    { run = '/home/sarath/.local/bin/mpv-share "$@"', block = true, desc = "Share with mpv-share" }
+]
+
+[open]
+rules = [
+	{ mime = "video/*", use = [ "mpv-share", "open" ] },
+]
+
+
+
+
