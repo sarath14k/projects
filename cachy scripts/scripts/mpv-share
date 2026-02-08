@@ -1,0 +1,133 @@
+#!/bin/bash
+
+# Enhanced mpv-share script with playback controls
+# Usage:
+#   mpv-share <file>    - Plays file in mpv with full controls and shares to Google Meet
+
+# Find or create v4l2loopback device
+DEVICE=$(v4l2-ctl --list-devices | grep -A 1 "MPV Virtual Cam" | grep "/dev/video" | awk '{print $1}')
+
+# Load module if not found
+if [ -z "$DEVICE" ]; then
+    echo "Loading v4l2loopback module..."
+    sudo modprobe v4l2loopback devices=1 exclusive_caps=1 card_label="MPV Virtual Cam" video_nr=2
+    sleep 1
+    DEVICE=$(v4l2-ctl --list-devices | grep -A 1 "MPV Virtual Cam" | grep "/dev/video" | awk '{print $1}')
+fi
+
+if [ -z "$DEVICE" ]; then
+    echo "Error: MPV Virtual Cam device not found even after modprobe."
+    exit 1
+fi
+
+# Fix permissions only if necessary
+if [ ! -w "$DEVICE" ]; then
+    echo "Fixing permissions for $DEVICE..."
+    sudo chgrp video "$DEVICE" 2>/dev/null
+    sudo chmod 660 "$DEVICE" 2>/dev/null
+fi
+
+# Cleanup function
+cleanup() {
+    echo -e "\nStopping streams..."
+    [ -n "$MPVPID" ] && kill $MPVPID 2>/dev/null
+    [ -n "$WFPID" ] && kill $WFPID 2>/dev/null
+    [ -n "$REMAP_ID" ] && pactl unload-module $REMAP_ID 2>/dev/null
+    exit 0
+}
+
+trap cleanup SIGINT SIGTERM
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <video-file> [video-file...]"
+    echo "This will play the video(s) in mpv with full controls and share it to Google Meet"
+    exit 1
+fi
+
+echo "Setting up audio routing..."
+
+# Check if audio routing already exists
+EXISTING_MODULE=$(pactl list sources short | grep "MPV_Share_Audio" | cut -f1)
+
+if [ -n "$EXISTING_MODULE" ]; then
+    echo "Using existing virtual microphone (Module ID: $EXISTING_MODULE)"
+    REMAP_ID=""
+else
+    # Get default sink
+    DEFAULT_SINK=$(pactl get-default-sink)
+    echo "Default audio output: $DEFAULT_SINK"
+
+    # Create a virtual microphone that remaps the monitor (output) of your default sink
+    echo "Creating virtual microphone..."
+    REMAP_ID=$(pactl load-module module-remap-source \
+        master="${DEFAULT_SINK}.monitor" \
+        source_name=MPV_Share_Audio \
+        source_properties=device.description="MPV_Share_Audio")
+        
+    echo "Virtual microphone created (module ID: $REMAP_ID)"
+fi
+
+echo "Look for 'MPV_Share_Audio' or 'Monitor of...' in Google Meet microphone list"
+sleep 2
+
+echo "Starting mpv player..."
+echo "Use mpv controls: SPACE=pause/play, LEFT/RIGHT=seek, Q=quit"
+echo "Playlist controls: < / > to skip tracks, ENTER to view playlist"
+
+# Play video in mpv with NORMAL audio output (to your speakers)
+# Pass all arguments "$@" to support playlists
+mpv --title="MPV Share" \
+    --geometry=1280x720 \
+    "$@" &
+MPVPID=$!
+
+# Wait for mpv window to appear
+sleep 2
+
+echo "Capturing mpv window to $DEVICE..."
+
+# Get mpv window geometry
+GEOM=$(hyprctl clients -j | jq -r '.[] | select(.title | contains("MPV Share")) | "\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"' | head -1)
+
+if [ -z "$GEOM" ] || [ "$GEOM" == "null,null 0x0" ]; then
+    echo "Warning: Could not auto-detect mpv window. Using manual selection..."
+    sleep 1
+    GEOM=$(slurp)
+fi
+
+# Ensure even dimensions
+X=$(echo "$GEOM" | cut -d',' -f1)
+Y=$(echo "$GEOM" | cut -d',' -f2 | cut -d' ' -f1)
+W=$(echo "$GEOM" | cut -d' ' -f2 | cut -d'x' -f1)
+H=$(echo "$GEOM" | cut -d' ' -f2 | cut -d'x' -f2)
+W=$((W / 2 * 2))
+H=$((H / 2 * 2))
+GEOM="${X},${Y} ${W}x${H}"
+
+echo "Capturing region: $GEOM"
+
+# Stream window to v4l2 device
+wf-recorder -r 30 --geometry "$GEOM" -c rawvideo --pixel-format yuv420p -m v4l2 -f "$DEVICE" &
+WFPID=$!
+
+echo ""
+echo "=========================================="
+echo "MPV Share is running!"
+echo "=========================================="
+echo ""
+echo "In Google Meet (qutebrowser):"
+echo "  Camera: Select 'MPV Virtual Cam'"
+echo "  Microphone: Select 'MPV Share Audio'"
+echo "  IMPORTANT: Turn OFF 'Noise Cancellation' in Audio Settings"
+echo "  (Otherwise music will be filtered out!)"
+echo ""
+echo "Control playback in the mpv window:"
+echo "  SPACE = Pause/Play"
+echo "  LEFT/RIGHT = Seek -/+ 5 seconds"
+echo "  UP/DOWN = Seek -/+ 60 seconds  "
+echo "  Q = Quit"
+echo ""
+echo "Press Ctrl+C here to stop sharing"
+echo ""
+
+wait
