@@ -1,0 +1,7 @@
+[Unit]
+Description=Organize Downloads Folder
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/sarath/.gemini/antigravity/scratch/downloads-organizer/organizer.py
+StandardOutput=journal

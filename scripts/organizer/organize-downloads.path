@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch Downloads Folder for Changes
+
+[Path]
+PathChanged=%h/Downloads
+PathChanged=%h
+Unit=organize-downloads.service
+
+[Install]
+WantedBy=default.target
