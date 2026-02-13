@@ -33,21 +33,43 @@ MEDIA_EXTS = {
 }
 
 CODECS = {
+    "AV1 (VAAPI 10-bit)": {"name": "av1_vaapi", "fmt": "p010", "type": "vaapi"},
     "HEVC (VAAPI 10-bit)": {"name": "hevc_vaapi", "fmt": "p010", "type": "vaapi"},
     "HEVC (Standard 8-bit)": {"name": "hevc_vaapi", "fmt": "nv12", "type": "vaapi"},
-    "AV1 (VAAPI 10-bit)": {"name": "av1_vaapi", "fmt": "p010", "type": "vaapi"},
     "AV1 (CPU - SVT-AV1)": {"name": "libsvtav1", "fmt": "yuv420p10le", "type": "cpu"},
 }
 
 QUALITY_MAP_GPU = {
-    "Best - 95% (QV-17)": 17,
-    "High - 80% (QV-20)": 20,
-    "Main - 65% (QV-23)": 23,
-    "Lite - 45% (QV-27)": 27,
-    "Tiny - 30% (QV-32)": 32,
+    "Best - 95%": "best",
+    "High - 80%": "high",
+    "Main - 65%": "main",
+    "Lite - 45%": "lite",
+    "Tiny - 30%": "tiny",
 }
 
-BITRATE_MULTIPLIER_MAP = {17: 0.95, 20: 0.8, 23: 0.65, 27: 0.45, 32: 0.3}
+GPU_BITRATE_TARGETS = {
+    "best": 1.0,
+    "high": 0.8,
+    "main": 0.65,
+    "lite": 0.45,
+    "tiny": 0.3,
+}
+
+GPU_QV_MAP_AV1 = {
+    "best": 20,
+    "high": 23,
+    "main": 26,
+    "lite": 30,
+    "tiny": 34,
+}
+
+GPU_QV_MAP_HEVC = {
+    "best": 15,
+    "high": 18,
+    "main": 21,
+    "lite": 25,
+    "tiny": 29,
+}
 
 DEFAULT_COMPRESSION_LEVEL = 1
 

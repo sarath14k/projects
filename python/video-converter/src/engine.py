@@ -117,10 +117,12 @@ def build_ffmpeg_command(
                 preset = x265_presets.get(val, "medium")
                 cmd.extend(["-crf", "26", "-preset", preset])
         else:
+            # AMD/VAAPI specific optimizations
             cmd.extend(["-compression_level", str(compression_level)])
-            depth = (
-                8 if compression_level <= 2 else (6 if compression_level <= 4 else 4)
-            )
+            
+            # Use higher async_depth for modern AMD cards (e.g. RX series)
+            # Higher depth allows better hardware utilization
+            depth = 16 if compression_level <= 2 else 8
             cmd.extend(["-async_depth", str(depth)])
 
             buf_size = max_bitrate * 2

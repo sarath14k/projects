@@ -1,301 +1,147 @@
-STANDARD_CSS = """
-    @define-color bg_color #242424;
-    @define-color fg_color #eeeeee;
-    @define-color card_bg #323232;
-    @define-color accent_color #2ec27e;
-    @define-color accent_hover #3ad68e;
-    @define-color destructive_color #e74c3c;
-    @define-color destructive_hover #ff6b6b;
+BASE_CSS = """
+    @define-color bg_color {bg_color};
+    @define-color fg_color {fg_color};
+    @define-color card_bg {card_bg};
+    @define-color accent_color {accent_color};
+    @define-color accent_hover {accent_hover};
+    @define-color destructive_color {destructive_color};
+    @define-color destructive_hover {destructive_hover};
+    @define-color warning_color {warning_color};
+    @define-color warning_hover {warning_hover};
+    @define-color success_color {success_color};
+    @define-color info_color {info_color};
+    @define-color border_color {border_color};
+    @define-color shadow_color {shadow_color};
 
-    * {
-        font-family: "Inter", "Roboto", "Segoe UI", "Cantarell", "Ubuntu", sans-serif;
-    }
+    * {{
+        font-family: "Google Sans", "Inter", "Roboto", "Segoe UI", sans-serif;
+        -gtk-icon-style: symbolic;
+    }}
 
-    window, textview, .background {
+    window, textview, .background, .sidebar-bg {{
         background-color: @bg_color;
         color: @fg_color;
-    }
+    }}
 
-    .dim-label {
+    .dim-label {{
         opacity: 0.6;
         font-size: 11px;
         margin-bottom: 2px;
         font-weight: 600;
         letter-spacing: 0.5px;
-    }
+    }}
 
-    .sidebar-bg {
-        background-color: alpha(#000000, 0.1);
-        border-right: 1px solid alpha(#ffffff, 0.05);
-    }
-
-    .row-card {
-        border-radius: 16px;
-        border: 1px solid alpha(#ffffff, 0.05);
+    .row-card {{
+        border-radius: 12px;
+        border: 1px solid @border_color;
         background-color: @card_bg;
         padding: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
+        box-shadow: 0 2px 8px @shadow_color;
+        transition: all 0.2s ease;
+    }}
 
-    .row-card:hover {
-        background-color: shade(@card_bg, 1.05);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    }
+    .row-card:hover {{
+        background-color: alpha(@fg_color, 0.05);
+        border-color: @accent_color;
+        box-shadow: 0 4px 12px @shadow_color;
+    }}
 
-    .file-list { background: transparent; }
-    .file-list row {
-        padding-bottom: 12px;
-        background: transparent;
-        margin-left: 4px;
-        margin-right: 4px;
-    }
-    .file-list row:last-child { padding-bottom: 0; }
-    .file-list row:hover { background: transparent; }
-
-    .active-row .row-card {
+    .active-row .row-card {{
         border: 1px solid @accent_color;
         background-color: alpha(@accent_color, 0.08);
-    }
+    }}
 
-    .thumbnail {
+    .thumbnail {{
         border-radius: 8px;
         background-color: #000000;
-    }
+    }}
 
-    .drag-active {
-        border: none;
+    .drag-active {{
+        border: 2px dashed @accent_color;
         background-color: alpha(@accent_color, 0.05);
         border-radius: 16px;
-    }
+    }}
 
-    button {
+    button {{
         min-height: 38px;
         min-width: 38px;
         padding: 0 12px;
         border-radius: 8px;
         font-weight: 500;
-    }
+        background-color: @card_bg;
+        border: 1px solid @border_color;
+        color: @fg_color;
+        transition: all 0.2s ease;
+    }}
+    
+    button:hover {{
+        background-color: alpha(@fg_color, 0.1);
+    }}
 
-    .destructive-action {
-        background-image: none;
+    .suggested-action {{
+        background-color: @accent_color;
+        color: @bg_color;
+        font-weight: 700;
+        border: none;
+    }}
+    .suggested-action:hover {{ background-color: @accent_hover; }}
+    
+    .destructive-action {{
         background-color: @destructive_color;
         color: white;
         border: none;
-        min-height: 38px;
-        min-width: 38px;
-        padding: 0 12px;
-    }
-    .destructive-action image, .destructive-action box {
-        background-color: transparent;
-        background-image: none;
-        color: inherit;
-    }
-    .destructive-action:hover { background-color: @destructive_hover; }
+    }}
+    .destructive-action:hover {{ background-color: @destructive_hover; }}
 
-    .flat-button {
-        min-height: 28px;
-        min-width: 28px;
-        padding: 4px;
-        margin: 0px;
+    .flat-button {{
         border: none;
         background: transparent;
         box-shadow: none;
         color: alpha(@fg_color, 0.6);
         border-radius: 50%;
-    }
-    .flat-button:hover {
+        min-height: 24px;
+        min-width: 24px;
+        padding: 4px;
+    }}
+    .flat-button:hover {{
         background-color: alpha(@fg_color, 0.1);
         color: @accent_color;
-    }
-    .flat-button:active { background-color: alpha(@fg_color, 0.2); }
+    }}
 
-    .suggested-action {
-        background-image: none;
-        background-color: @accent_color;
-        color: #000000;
-        font-weight: 700;
-        border: none;
-        border-radius: 8px;
-        padding: 0 12px;
-        min-height: 38px;
-        min-width: 38px;
-    }
-    .suggested-action label { background-color: transparent; color: inherit; }
-    .suggested-action:hover { background-color: @accent_hover; }
-    .suggested-action:disabled {
-        background-color: alpha(@fg_color, 0.1);
-        color: alpha(@fg_color, 0.4);
-    }
-
-    .row-remove-btn { color: alpha(@fg_color, 0.5); }
-    .row-remove-btn:hover {
-        color: @destructive_hover;
-        background-color: alpha(@destructive_color, 0.15);
-        border-radius: 50%;
-    }
-
-    progressbar trough {
+    progressbar trough {{
         min-height: 6px;
         border-radius: 3px;
         background-color: alpha(#000000, 0.3);
-    }
-    progressbar progress {
+    }}
+    progressbar progress {{
         min-height: 6px;
         border-radius: 3px;
         background-color: @accent_color;
-    }
+    }}
+    .success-bar progress {{ background-color: @success_color; }}
+    .error-bar progress {{ background-color: @destructive_color; }}
 
-"""
-
-PITCH_BLACK_CSS = """
-    /* Color Palette - Pitch Black Theme */
-    @define-color bg_color #000000;
-    @define-color fg_color #ffffff;
-    @define-color card_bg #080808;
-    @define-color accent_color #2ec27e;
-    @define-color accent_hover #3ad68e;
-    @define-color destructive_color #e74c3c;
-    @define-color destructive_hover #ff6b6b;
-    @define-color warning_color #f39c12;
-    @define-color warning_hover #e67e22;
-    @define-color success_color #27ae60;
-    @define-color info_color #3498db;
-    @define-color border_color #333333;
-    @define-color shadow_color rgba(0, 0, 0, 0.5);
-
-    * {
-        -gtk-icon-style: symbolic;
-        font-family: "Inter", "Roboto", "Segoe UI", "Cantarell", "Ubuntu", sans-serif;
-    }
-
-    window, .background, headerbar, list, treeview, textview, eventbox, scrolledwindow, viewport, box {
-        background-color: @bg_color;
-        background-image: none;
-        border-color: @border_color;
-        color: @fg_color;
-    }
-
-    .sidebar-bg {
-        background-color: @bg_color;
-        border-right: none;
-    }
-
-    .row-card {
-        background-color: @card_bg;
-        border: 1px solid @border_color;
-        border-radius: 16px;
-        padding: 12px;
-    }
-    
-    .row-card:hover {
-        background-color: #111111;
-        box-shadow: 0 4px 12px @shadow_color;
-    }
-    
-    .row-card:active {
-        background-color: shade(@card_bg, 0.9);
-    }
-    
-    .row-card.disabled {
-        opacity: 0.5;
-    }
-    
-    .row-card.error {
-        border-color: @destructive_color;
-        background-color: alpha(@destructive_color, 0.05);
-    }
-    
-    .row-card.warning {
-        border-color: @warning_color;
-        background-color: alpha(@warning_color, 0.05);
-    }
-    
-    .row-card.success {
-        border-color: @success_color;
-        background-color: alpha(@success_color, 0.05);
-    }
-    .active-row .row-card {
-        border: 1px solid @accent_color;
-        background-color: alpha(@accent_color, 0.05);
-    }
-
-    button:not(.suggested-action):not(.destructive-action):not(.flat-button) {
-        background-color: @card_bg;
-        background-image: none;
-        border: none;
-        box-shadow: none;
-        text-shadow: none;
-        color: @fg_color;
-    }
-    button:not(.suggested-action):not(.destructive-action):not(.flat-button):hover {
-        background-color: #161616;
-    }
-    button:not(.suggested-action):not(.destructive-action):not(.flat-button):active {
-        background-color: #222222;
-    }
-
-    .suggested-action {
-        background-color: @accent_color;
-        color: #000000;
-        border: none;
-    }
-    .suggested-action:hover {
-        background-color: @accent_hover;
-    }
-
-    button image, button box, button > * {
+    .header-area {{
         background-color: transparent;
-        background-image: none;
-        border: none;
-        box-shadow: none;
-    }
-
-    entry, combobox, spinbutton, treeview, textview, popover, menu, menubar, toolbar {
-        background-color: @bg_color;
-        color: @fg_color;
-        border: none;
-        box-shadow: none;
-    }
-
-    combobox button,
-    combobox > box.linked > button.combo {
-         background-color: @bg_color;
-         border: none;
-         box-shadow: none;
-    }
-    combobox box, combobox cellview {
-         background-color: transparent;
-         color: @fg_color;
-    }
-
-    menuitem, modelbutton {
-        color: @fg_color;
-        background-color: @bg_color;
-    }
-    menuitem:hover, modelbutton:hover {
-        background-color: #111111;
-    }
-
-    scrollbar slider {
-        background-color: #333333;
-    }
-    progressbar trough {
-        background-color: #222222;
-    }
-
-    .drag-active {
-        border: 2px solid @accent_color;
-        background-color: alpha(@accent_color, 0.08);
-        border-radius: 16px;
-    }
+    }}
     
-    .drag-active box,
-    .drag-active image,
-    .drag-active label,
-    .drag-active * {
-        background-color: transparent;
-        background-image: none;
-        border: none;
-        box-shadow: none;
-    }
+    .compact-header {{
+        padding: 4px 8px;
+    }}
+    
+    .header-row {{
+        margin-bottom: 4px;
+    }}
+
+    .bottom-bar {{
+        background-color: @card_bg;
+        border-top: 1px solid @border_color;
+        margin-top: 4px;
+    }}
+
+    .accent-text {{ color: @accent_color; font-weight: bold; }}
+    .success-text {{ color: @success_color; font-weight: bold; }}
+    .warning-text {{ color: @warning_color; font-weight: bold; }}
+    .error-text {{ color: @destructive_color; font-weight: bold; }}
+    .info-text {{ color: @info_color; }}
 """

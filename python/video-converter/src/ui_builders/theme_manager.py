@@ -1,65 +1,59 @@
-"""Theme manager for handling dark/pitch-black theme switching."""
+"""Theme manager for handling dynamic theme switching from the registry."""
 
 from gi.repository import Gtk, Gdk
-from ..css import PITCH_BLACK_CSS, STANDARD_CSS
+from ..css import BASE_CSS
+from ..themes import THEMES
 
-def load_standard_css():
-    """Load the standard gray theme CSS."""
-    p = Gtk.CssProvider()
-    p.load_from_data(STANDARD_CSS.encode("utf-8"))
-    Gtk.StyleContext.add_provider_for_screen(
-        Gdk.Screen.get_default(), p, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+def apply_theme(theme_name):
+    """Apply a theme by name from the registry."""
+    theme = THEMES.get(theme_name)
+    if not theme:
+        return
+
+    # Generate CSS from template
+    css_data = BASE_CSS.format(
+        bg_color=theme.bg_color,
+        fg_color=theme.fg_color,
+        card_bg=theme.card_bg,
+        accent_color=theme.accent_color,
+        accent_hover=theme.accent_hover,
+        destructive_color=theme.destructive_color,
+        destructive_hover=theme.destructive_hover,
+        warning_color=theme.warning_color,
+        warning_hover=theme.warning_hover,
+        success_color=theme.success_color,
+        info_color=theme.info_color,
+        border_color=theme.border_color,
+        shadow_color=theme.shadow_color
     )
 
-def on_theme_toggled(window, switch, state):
-    """Handle theme toggle switch.
+    provider = Gtk.CssProvider()
+    provider.load_from_data(css_data.encode("utf-8"))
+    
+    screen = Gdk.Screen.get_default()
+    Gtk.StyleContext.add_provider_for_screen(
+        screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+    )
+    
+    # Store for reference
+    return provider
 
-    Args:
-        window: The main VideoConverter window instance
-        switch: The theme switch widget
-        state: The new state (True = pitch black, False = standard dark)
-    """
+def init_theme(window):
+    """Initialize theme on window startup."""
+    theme_name = window.config.get("theme", "Modern (System)")
+    window.css_provider = apply_theme(theme_name)
+    
+    # Update GTK settings to prefer dark if it's a dark theme
     settings = Gtk.Settings.get_default()
-
-    # Always prefer dark theme (no more light mode)
     settings.set_property("gtk-application-prefer-dark-theme", True)
     settings.set_property("gtk-theme-name", "Adwaita-dark")
 
-    # Apply pitch black override if enabled
-    update_pitch_black_css(window, state)
-
-    # Update label text
-    if hasattr(window, 'theme_label'):
-         window.theme_label.set_text("Black" if state else "Gray")
-
-    return False
-
-def update_pitch_black_css(window, enabled):
-    """Update pitch black CSS provider.
-
-    Args:
-        window: The main VideoConverter window instance
-        enabled: Whether to enable pitch black theme
-    """
-    if not hasattr(window, "pitch_black_provider"):
-        window.pitch_black_provider = Gtk.CssProvider()
-        window.pitch_black_provider.load_from_data(PITCH_BLACK_CSS.encode("utf-8"))
-
-    # Revert dynamic switching: ensure button always has the right icon if needed
-    if not enabled:
-         # Ensure we are back to symbolic if we were in pitch black
-         image = window.add_btn.get_image()
-         if isinstance(image, Gtk.Image):
-              image.set_from_icon_name("list-add-symbolic", Gtk.IconSize.BUTTON)
-         else:
-              window.add_btn.set_image(Gtk.Image.new_from_icon_name("list-add-symbolic", Gtk.IconSize.BUTTON))
-
-    screen = Gdk.Screen.get_default()
-    if enabled:
-        Gtk.StyleContext.add_provider_for_screen(
-            screen, window.pitch_black_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1
-        )
-    else:
-        Gtk.StyleContext.remove_provider_for_screen(
-            screen, window.pitch_black_provider
-        )
+def on_theme_changed(combo, window):
+    """Handle theme selection from ComboBox."""
+    theme_name = combo.get_active_text()
+    if theme_name:
+        window.css_provider = apply_theme(theme_name)
+        window.config["theme"] = theme_name
+        # Simple feedback
+        if hasattr(window, 'queue_status'):
+             window.queue_status.set_markup(f"<span foreground='{THEMES[theme_name].accent_color}'>Theme updated to {theme_name}</span>")

@@ -10,7 +10,7 @@ from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango
 from .config import *
 from .engine import ProgressParser, build_ffmpeg_command
 from .utils import SleepInhibitor, ui, THUMB_POOL
-from .css import BASE_CSS
+from .css import PITCH_BLACK_CSS
 from .components.file_row import FileRow
 from . import utils
 
@@ -22,31 +22,27 @@ from .ui_builders import header_builder, sidebar_builder, main_area_builder, the
 
 class VideoConverter(Gtk.Window):
     def __init__(self):
-        Gtk.Window.__init__(self)
-        self.set_title("Video Converter")
+        super().__init__(title="Video Converter")
         # FIXED: Use set_prgname instead of deprecated set_wmclass
         GLib.set_prgname(APP_NAME)
 
-        self.set_default_size(950, 700)
+        self.set_default_size(950, 650)
         self.set_border_width(0)
 
-        self.shelf_visible = False
-        self.is_compact = False
-        self.files = {} 
+        self.sidebar_visible = True
+        self.files = {} # Keep compatibility if needed, but managers handle it
         self.last_folder = str(Path.home())
         self.last_output_dir = None
         self.rem_sec = 0
         self.countdown_source_id = None
-        self.config = ConfigManager.load() # Load config early for theme
-        self.proc = None
-        self.active_quality_map = QUALITY_MAP_GPU 
-
-        # Initialize Theme FIRST
-        theme_manager.init_theme(self)
+        self.config = {} # Initialize config for _combo usage
+        self.proc = None  # Track encoding process state (compatibility)
+        self.active_quality_map = QUALITY_MAP_GPU  # Initialize with default quality map
 
         self._init_ui()
         self._init_shortcuts()
 
+        # Initialize managers AFTER UI is created
         self.prefs_manager = PrefsManager(self)
         self.file_manager = FileManager(self)
         self.conversion_manager = ConversionManager(self)
@@ -59,7 +55,7 @@ class VideoConverter(Gtk.Window):
         self.connect("drag-leave", self.on_drag_leave)
         self.connect("drag-data-received", self.on_drag_data_received)
 
-        # Load Preferences (overwrites some defaults if saved)
+        # Load Preferences
         self.prefs_manager.load_prefs()
         self.connect("delete-event", self.on_quit_attempt)
 
@@ -67,6 +63,10 @@ class VideoConverter(Gtk.Window):
         # Deferred UI restore and initial state update
         self.prefs_manager.restore_ui_state()
         self._update_empty_state()
+
+        # Apply theme label
+        pitch = self.theme_switch.get_active()
+        self.theme_label.set_text("Black" if pitch else "Gray")
 
     def on_quit_attempt(self, widget, event):
         if self.conversion_manager.ffmpeg_process:
@@ -90,32 +90,24 @@ class VideoConverter(Gtk.Window):
         self.prefs_manager.save_prefs()
         THUMB_POOL.shutdown(wait=False)
 
-    def on_size_allocate(self, widget, allocation):
-        """Handle window resizing for responsive stacking."""
-        # Threshold for compact mode (450px)
-        new_compact = allocation.width < 450
-        if new_compact != self.is_compact:
-            self.is_compact = new_compact
-            self.update_responsive_layout()
-
-    def update_responsive_layout(self):
-        """Update sub-builders for current layout mode."""
-        header_builder.update_header_layout(self)
-        sidebar_builder.update_bottom_bar_layout(self)
-
     def _init_ui(self):
         """Initialize the UI using modular builders."""
-        # Main layout is vertical now
-        self.vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.add(self.vbox)
+        # Load standard theme first
+        theme_manager.load_standard_css()
 
-        # Build UI components
+        # Build header with theme switcher
         header_builder.build_header(self)
-        main_area_builder.build_main_area(self)
-        sidebar_builder.build_sidebar(self)
 
-        # Connect size-allocate to handle responsiveness
-        self.connect("size-allocate", self.on_size_allocate)
+        # Create overlay and main container
+        self.overlay = Gtk.Overlay()
+        self.add(self.overlay)
+
+        self.main_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.overlay.add(self.main_hbox)
+
+        # Build sidebar with configuration options
+        sidebar_builder.build_sidebar(self)
+        main_area_builder.build_main_area(self)
 
     def _init_shortcuts(self):
         self.connect("key-press-event", self.on_key_press)
@@ -135,9 +127,9 @@ class VideoConverter(Gtk.Window):
             return True
         return False
 
-    def toggle_shelf(self, show):
-        self.shelf_revealer.set_reveal_child(show)
-        self.shelf_visible = show
+    def toggle_sidebar(self, show):
+        self.sidebar_revealer.set_reveal_child(show)
+        self.sidebar_visible = show
         self.queue_draw()
 
     def _update_empty_state(self):
@@ -171,23 +163,11 @@ class VideoConverter(Gtk.Window):
             default_val = 6
         else:
             new_map = QUALITY_MAP_GPU
-            default_val = "main"
+            default_val = 26
 
         self.active_quality_map = new_map
         self.quality.remove_all()
-        
-        # Sort GPU presets logically by their bitrate target order
-        order = ["best", "high", "main", "lite", "tiny"]
-        sorted_items = []
-        if "CPU" in codec_key:
-            sorted_items = sorted(new_map.items(), key=lambda item: item[1])
-        else:
-            # Maintain the intended order for GPU presets
-            for level in order:
-                for k, v in new_map.items():
-                    if v == level:
-                        sorted_items.append((k, v))
-                        break
+        sorted_items = sorted(new_map.items(), key=lambda item: item[1])
         for k, v in sorted_items:
             self.quality.append_text(k)
 
@@ -275,6 +255,10 @@ class VideoConverter(Gtk.Window):
             self.countdown_source_id = None
             self.queue_status.set_markup("<span size='large' weight='bold' foreground='#2ec27e'>Countdown canceled.</span>")
 
-    def on_theme_changed(self, combo):
+    def on_theme_toggled(self, switch, state):
         """Delegate to theme manager."""
-        theme_manager.on_theme_changed(combo, self)
+        return theme_manager.on_theme_toggled(self, switch, state)
+
+    def _update_pitch_black_css(self, enabled):
+        """Delegate to theme manager."""
+        theme_manager.update_pitch_black_css(self, enabled)

@@ -38,7 +38,13 @@ class FileManager:
             q_text = self.window.quality.get_active_text() if hasattr(self.window, "quality") else "Main - 50% (QV-26)"
 
             out_path_str, _ = utils.generate_output_path(
-                p, q_map, q_text, len(paths), OUTPUT_DIR_NAME
+                p, 
+                q_map, 
+                q_text, 
+                len(paths), 
+                OUTPUT_DIR_NAME,
+                codec_key=params["codec_key"],
+                audio_codec_key=params["audio_codec"]
             )
             if Path(out_path_str).exists():
                 row.show_conflict()

@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from ..config import *
 
@@ -54,16 +55,19 @@ class PrefsManager:
             self.window.open_out_btn.set_sensitive(True)
 
         # Restore Theme
-        pitch_black = False
-        if "pitch_black" in self.config:
-            pitch_black = self.config.get("pitch_black")
-        elif "theme_mode" in self.config:
-            if self.config.get("theme_mode") == "pitch-black":
-                pitch_black = True
-
-        self.window.theme_switch.set_active(pitch_black)
-        # Apply manually
-        self.window.on_theme_toggled(self.window.theme_switch, pitch_black)
+        if "theme" in self.config:
+            theme_name = self.config["theme"]
+            model = self.window.theme_combo.get_model()
+            found = False
+            for i, row in enumerate(model):
+                if row[0] == theme_name:
+                    self.window.theme_combo.set_active(i)
+                    found = True
+                    break
+            if not found:
+                 self.window.theme_combo.set_active(0)
+        else:
+            self.window.theme_combo.set_active(0)
 
     def gather_prefs(self):
         return {
@@ -74,7 +78,7 @@ class PrefsManager:
             "after_complete": self.window.after_complete.get_active(),
             "last_folder": self.window.last_folder,
             "gpu_device": self.window.gpu_device.get_active(),
-            "compression_level": self.window.compression_level.get_active(),
-            "pitch_black": self.window.theme_switch.get_active(),
+            "compression_level": self.window.compression_level.get_active() if hasattr(self.window, 'compression_level') else 0,
+            "theme": self.window.theme_combo.get_active_text(),
             "last_output_dir": self.window.last_output_dir,
         }

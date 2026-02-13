@@ -1,9 +1,14 @@
-[[manager.prepend_keymap]]
+[[mgr.prepend_keymap]]
+on   = "w"
+run  = 'shell "/home/sarath/.local/bin/mpv-share \"$0\"" --block'
+desc = "Share with mpv-share"
+
+[[mgr.prepend_keymap]]
 on   = [ "g", "t" ]
 run  = "plugin recycle-bin -- open"
 desc = "Go to Trash"
 
-[[manager.prepend_keymap]]
+[[mgr.prepend_keymap]]
 on   = [ " ", "t" ]
 run  = "plugin recycle-bin"
 desc = "Trash Menu (Restore, Empty, etc.)"

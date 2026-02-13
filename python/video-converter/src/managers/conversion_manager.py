@@ -11,7 +11,9 @@ from ..utils import ui, SleepInhibitor
 from ..config import (
     AUTO_CLOSE_MAP,
     CODECS,
-    BITRATE_MULTIPLIER_MAP,
+    GPU_BITRATE_TARGETS,
+    GPU_QV_MAP_AV1,
+    GPU_QV_MAP_HEVC,
     QUALITY_MAP_GPU,
     QUALITY_MAP_CPU,
     DEFAULT_COMPRESSION_LEVEL,
@@ -142,7 +144,7 @@ class ConversionManager:
                 # but if stopped we might want to resume. 
                 # For now, if result is None and not stop_requested, mark as error.
                 if not self.stop_requested:
-                    ui(setattr, row, "status", "failed")
+                    ui(row.set_error, "Encoding Failed")
 
         self.sleep_inhibitor.stop()
         ui(self._on_queue_finished)
@@ -155,26 +157,44 @@ class ConversionManager:
             "codec": CODECS.get(codec_key, CODECS["HEVC (VAAPI 10-bit)"]),
             "gpu": p.get("gpu", "cpu"),
             "scale": p.get("scale", True),
-            "compression_level": DEFAULT_COMPRESSION_LEVEL
+            "compression_level": p.get("compression_level", DEFAULT_COMPRESSION_LEVEL)
         }
         
-        # Resolve quality value based on codec type
+        # Resolve quality preset from UI
+        q_label_full = p.get("quality_text", "Main - 65%")
         q_map = QUALITY_MAP_CPU if "CPU" in codec_key else QUALITY_MAP_GPU
-        params["quality"] = q_map.get(p.get("quality_text"), 23 if "CPU" not in codec_key else 6)
+        q_level = q_map.get(q_label_full, "main" if "CPU" not in codec_key else 6)
 
-        # Get video info
-        duration, fps, input_codec, src_bitrate, width = utils.get_video_info(row.path)
+        # Get video info (duration, fps, codec, total_bitrate, video_bitrate, width)
+        res = utils.get_video_info(row.path)
+        duration, fps, input_codec, total_bitrate, video_bitrate, width = res
 
-        # Calculate target and max bitrate (bits/s to match FFmpeg expectation)
-        quality_val = params["quality"]
-        multiplier = BITRATE_MULTIPLIER_MAP.get(quality_val, 0.5)
-        # Match original C++ logic for minimum bitrate safety
-        target_bitrate = max(int(src_bitrate * multiplier), 300_000)
-        max_bitrate = max(int(target_bitrate * 1.5), 600_000)
+        # Calculate target for VIDEO stream only (bits/s)
+        if "CPU" in codec_key:
+            params["quality"] = q_level
+            multiplier = 0.65 # Fallback for CPU
+        else:
+            # GPU Specific targeting
+            is_hevc = "HEVC" in codec_key
+            qv_map = GPU_QV_MAP_HEVC if is_hevc else GPU_QV_MAP_AV1
+            # We use the calibrated QV number for the encoder
+            params["quality"] = qv_map.get(q_level, 26 if not is_hevc else 21)
+            # We use the standard multiplier for the bitrate target
+            multiplier = GPU_BITRATE_TARGETS.get(q_level, 0.65)
+        
+        # We target a percentage of the VIDEO bitrate
+        target_bitrate = int(video_bitrate * multiplier)
+        
+        # Peak cap: Don't let the video peak go much higher than the original video.
+        max_bitrate = min(int(target_bitrate * 2.5), int(video_bitrate * 1.1))
+        
+        # Absolute floors (prevent total failure on weird files)
+        target_bitrate = max(target_bitrate, 500_000)
+        max_bitrate = max(max_bitrate, 1_000_000)
 
         # Prepare output path and parameters
         codec_settings = row.params.get("codec_key", "HEVC (VAAPI 10-bit)")
-        q_label = row.params.get("quality_text", "Main - 65% (QV-23)")
+        q_label = row.params.get("quality_text", "Main - 65% (QV-26)")
         mode_label = row.params.get("process_mode", "Video + Audio")
         audio_label = row.params.get("audio_codec", "Copy")
         
@@ -298,7 +318,7 @@ class ConversionManager:
 
         except Exception as e:
             row.log_data.append(f"\nError: {e}")
-            ui(row.info.set_text, "Error")
+            ui(row.set_error, f"Error: {str(e)[:30]}")
             
         return None
 

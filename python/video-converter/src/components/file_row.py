@@ -241,12 +241,20 @@ class FileRow:
             ui(self.label.get_style_context().remove_class, "activity-text")
 
     def show_conflict(self):
-        self.conflict.set_markup("<span foreground='#f39c12' weight='bold' size='small'>⚠ Overwrite</span>")
+        self.conflict.set_markup("<span class='warning-text' size='small'>⚠ Overwrite</span>")
         self.conflict.show()
 
     def set_success(self):
         self.status = "completed"
+        self.progress.get_style_context().remove_class("error-bar")
         self.progress.get_style_context().add_class("success-bar")
+
+    def set_error(self, message="Error"):
+        self.status = "failed"
+        self.progress.get_style_context().remove_class("success-bar")
+        self.progress.get_style_context().add_class("error-bar")
+        self.info.set_markup(f"<span class='error-text'><b>{message}</b></span>")
+        self.log_btn.set_visible(True)
 
     def set_reorder_locked(self, locked):
         if locked:
@@ -294,9 +302,9 @@ class FileRow:
         self.progress.set_fraction(pct)
         from .. import utils
         markup = (
-            f"<span size='large'><b>{int(pct * 100)}%</b> • <span foreground='#2ec27e'><b>{fps:.0f} fps</b></span> • <span foreground='#62a0ea'>x{speed:.1f}</span> • "
-            f"<span foreground='#ffb74d'><b>ETA: {utils.format_time(rem)}</b></span></span>\n"
-            f"<span size='medium' alpha='80%'>{init_size_str} ➝ <span foreground='#c061cb'>{est_size_str}</span></span>"
+            f"<span size='large'><b>{int(pct * 100)}%</b> • <span class='accent-text'>{fps:.0f} fps</span> • <span class='info-text'>x{speed:.1f}</span> • "
+            f"<span class='warning-text'>ETA: {utils.format_time(rem)}</span></span>\n"
+            f"<span size='medium' alpha='80%'>{init_size_str} ➝ <span class='info-text'>{est_size_str}</span></span>"
         )
         self.info.set_markup(markup)
 
@@ -305,15 +313,16 @@ class FileRow:
         from .. import utils
         
         # Color the compression percent based on performance
-        color = "#2ec27e" if compression_pct > 0 else "#e01b24"
+        cls = "success-text" if compression_pct > 30 else "accent-text"
+        if compression_pct < 0: cls = "error-text"
         
         # Ensure status is updated thread-safely if called from thread
         self.status = "completed"
         
         markup = (
-            f"<span size='large' foreground='#2ec27e'><b>Completed in {utils.format_time(elapsed_time)}</b></span>\n"
-            f"<span size='medium' alpha='80%'>{initial_size_str} ➝ <span foreground='#c061cb'><b>{final_size_str}</b></span> "
-            f"(<span foreground='{color}'><b>-{compression_pct:.1f}%</b></span>)</span>"
+            f"<span size='large' class='success-text'>Completed in {utils.format_time(elapsed_time)}</span>\n"
+            f"<span size='medium' alpha='80%'>{initial_size_str} ➝ <span class='accent-text'><b>{final_size_str}</b></span> "
+            f"(<span class='{cls}'><b>-{compression_pct:.1f}%</b></span>)</span>"
         )
         self.info.set_markup(markup)
 
@@ -329,7 +338,9 @@ class FileRow:
 
 class FileSettingsDialog(Gtk.Dialog):
     def __init__(self, parent, params):
-        super().__init__(title="File Conversion Settings", transient_for=parent, flags=0)
+        Gtk.Dialog.__init__(self)
+        self.set_title("File Conversion Settings")
+        self.set_transient_for(parent)
         self.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK)
         self.set_default_size(400, -1)
         

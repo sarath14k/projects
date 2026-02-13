@@ -9,7 +9,7 @@ from pathlib import Path
 from gi.repository import GLib
 
 from concurrent.futures import ThreadPoolExecutor
-from .config import APP_NAME, CACHE_DIR
+from .config import APP_NAME, CACHE_DIR, GPU_QV_MAP_AV1, GPU_QV_MAP_HEVC
 
 THUMB_POOL = ThreadPoolExecutor(max_workers=4)
 
@@ -202,12 +202,20 @@ def get_video_info(file_path):
 
         dur = float(data["format"].get("duration", 1.0))
 
-        # Try format bit_rate first, then stream bit_rate
-        src_bitrate = data["format"].get("bit_rate")
-        if not src_bitrate and "streams" in data:
-            src_bitrate = data["streams"][0].get("bit_rate")
+        # Global bitrate (for info/fallback)
+        total_bitrate = data["format"].get("bit_rate")
+        total_bitrate = float(total_bitrate) if total_bitrate else 5_000_000
 
-        src_bitrate = float(src_bitrate) if src_bitrate else 5_000_000
+        # Video-only bitrate (for accurate targeting)
+        video_bitrate = total_bitrate # Fallback
+        if "streams" in data and len(data["streams"]) > 0:
+            v_bits = data["streams"][0].get("bit_rate")
+            if v_bits:
+                video_bitrate = float(v_bits)
+            else:
+                # Estimate video bitrate if not in stream metadata
+                # (Often happens in some containers; assume 85% is video as fallback)
+                video_bitrate = total_bitrate * 0.85
 
         fps_str = data["streams"][0].get("r_frame_rate", "30/1")
         fps = (
@@ -218,9 +226,9 @@ def get_video_info(file_path):
         codec = data["streams"][0].get("codec_name", "unknown")
         width = int(data["streams"][0].get("width", 1920))
 
-        return dur, fps, codec, src_bitrate, width
+        return dur, fps, codec, total_bitrate, video_bitrate, width
     except:
-        return 1.0, 30.0, "unknown", 5_000_000, 1920
+        return 1.0, 30.0, "unknown", 5_000_000, 4_000_000, 1920
 
 def generate_output_path(
     src_path,
@@ -269,7 +277,18 @@ def generate_output_path(
         elif "AV1" in codec_key:
             container = ".mkv" # AV1 in mp4 is supported but mkv/webm is often preferred for compatibility
             
-        suffix = f"preset{val}" if val < 13 else f"qvbr{val}"
-        filename = f"{src.stem}_{src_ext}_{codec_name}_{suffix}{container}"
+        # Clean up codec name for the tag
+        tag_codec = "HEVC" if "HEVC" in codec_key else ("AV1" if "AV1" in codec_key else "VID")
+
+        # If val is a string (GPU preset label), resolve it to a number for the tag
+        num_val = val
+        if isinstance(val, str):
+            is_hevc = "HEVC" in codec_key
+            qv_map = GPU_QV_MAP_HEVC if is_hevc else GPU_QV_MAP_AV1
+            num_val = qv_map.get(val, 26 if not is_hevc else 21)
+
+        tag_quality = f"P{num_val}" if isinstance(num_val, int) and num_val < 13 else f"QV{num_val}"
+        
+        filename = f"{src.stem} [{tag_codec} {tag_quality}]{container}"
 
     return str(out_dir / filename), str(out_dir)
