@@ -14,6 +14,7 @@ local languages = {
 --          If subtitles are found for the first language,
 --          other languages will NOT be downloaded,
 --          so put your preferred language first:
+            { 'Malayalam', 'ml', 'mal' },
             { 'English', 'en', 'eng' },
             { 'Dutch', 'nl', 'dut' },
 --          { 'Spanish', 'es', 'spa' },
