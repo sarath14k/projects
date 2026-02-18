@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# mpv-share-audio - Audio-only setup for sharing already-playing mpv
+# This is triggered from within mpv via Ctrl+Shift+S keybind
+
+echo "=========================================="
+echo "MPV Share Audio Setup"
+echo "=========================================="
+echo ""
+
+# Cleanup function
+cleanup() {
+    echo ""
+    echo "Stopping audio sharing..."
+    local MOD_IDS=$(pactl list modules short | grep "module-remap-source" | grep "MPV_Share_Audio" | awk '{print $1}')
+    for id in $MOD_IDS; do
+        pactl unload-module "$id" 2>/dev/null
+    done
+}
+
+# Ensure cleanup on script exit (Ctrl+C or window close)
+trap cleanup EXIT SIGINT SIGTERM
+
+# Always search and unload existing audio modules first (force refresh)
+echo "Refreshing audio sharing setup..."
+MOD_IDS=$(pactl list modules short | grep "module-remap-source" | grep "MPV_Share_Audio" | awk '{print $1}')
+for id in $MOD_IDS; do
+    echo "Unloading existing module ID: $id"
+    pactl unload-module "$id" 2>/dev/null
+done
+
+# Get default sink
+DEFAULT_SINK=$(pactl get-default-sink)
+echo "Current audio device (master): $DEFAULT_SINK"
+echo ""
+
+# Create virtual microphone from monitor
+echo "Creating virtual microphone tied to: $DEFAULT_SINK"
+REMAP_ID=$(pactl load-module module-remap-source \
+    master="${DEFAULT_SINK}.monitor" \
+    source_name=MPV_Share_Audio \
+    source_properties=device.description="MPV_Share_Audio" 2>&1)
+
+if [[ "$REMAP_ID" =~ ^[0-9]+$ ]]; then
+    echo "✓ Virtual microphone created successfully!"
+    echo "  Module ID: $REMAP_ID"
+    echo ""
+    echo "=========================================="
+    echo "✓ READY TO SHARE"
+    echo "=========================================="
+    echo ""
+    echo "In Google Meet:"
+    echo "  1. Click microphone dropdown"
+    echo "  2. Select 'MPV_Share_Audio'"
+    echo "  3. IMPORTANT: Turn OFF 'Noise Cancellation' in Audio Settings"
+    echo "     (Otherwise music will be filtered out!)"
+    echo ""
+    echo "If you swap audio devices (e.g. Bluetooth), just press"
+    echo "Ctrl+Shift+S in mpv again to refresh this window."
+    echo ""
+else
+    echo "✗ Failed to create virtual microphone!"
+    echo "Error: $REMAP_ID"
+    echo ""
+    echo "Tip: Make sure the device '$DEFAULT_SINK' is active."
+fi
+
+echo ""
+read -p "KEEP THIS WINDOW OPEN to maintain audio sharing. Press Enter to stop..."

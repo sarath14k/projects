@@ -1,0 +1,135 @@
+#!/bin/bash
+
+# Improved mpv-share script with rawvideo for better browser compatibility
+# Usage:
+#   mpv-share <video-file>
+
+LOG_FILE="/tmp/mpv-share-wf.log"
+echo "--- Starting MPV Share at $(date) ---" > "$LOG_FILE"
+
+# Function to check exclusive_caps
+check_caps() {
+    if [ -f /sys/module/v4l2loopback/parameters/exclusive_caps ]; then
+        # Check if the first value is 1/Y
+        VAL=$(cat /sys/module/v4l2loopback/parameters/exclusive_caps | cut -d',' -f1)
+        if [ "$VAL" == "Y" ] || [ "$VAL" == "1" ]; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Find or create v4l2loopback device
+DEVICE=$(v4l2-ctl --list-devices 2>/dev/null | grep -A 1 "MPV Virtual Cam" | grep "/dev/video" | awk '{print $1}')
+
+# Load module if not found or if parameters need fixing
+if [ -z "$DEVICE" ] || ! check_caps; then
+    echo "Initializing v4l2loopback module (exclusive_caps=1)..."
+    
+    # Unload cleanly
+    sudo modprobe -r v4l2loopback 2>/dev/null
+    
+    if lsmod | grep -q "v4l2loopback"; then
+        echo "Warning: v4l2loopback is busy and couldn't be reloaded."
+        echo "Close browsers and try again, or reboot."
+    else
+        # We use devices=1 to keep it simple
+        sudo modprobe v4l2loopback devices=1 exclusive_caps=1 card_label="MPV Virtual Cam" video_nr=2
+        sleep 1
+    fi
+    
+    DEVICE=$(v4l2-ctl --list-devices 2>/dev/null | grep -A 1 "MPV Virtual Cam" | grep "/dev/video" | awk '{print $1}')
+fi
+
+if [ -z "$DEVICE" ]; then
+    echo "Error: MPV Virtual Cam device not found."
+    exit 1
+fi
+
+# Fix permissions
+sudo chgrp video "$DEVICE" 2>/dev/null
+sudo chmod 660 "$DEVICE" 2>/dev/null
+
+# Cleanup function
+cleanup() {
+    echo -e "\nStopping streams..."
+    [ -n "$WFPID" ] && kill $WFPID 2>/dev/null
+    [ -n "$MPVPID" ] && kill $MPVPID 2>/dev/null
+    
+    # Robustly unload ALL instances of the audio module
+    local MOD_IDS=$(pactl list modules short | grep "module-remap-source" | grep "MPV_Share_Audio" | awk '{print $1}')
+    for id in $MOD_IDS; do
+        echo "Unloading module ID: $id"
+        pactl unload-module "$id" 2>/dev/null
+    done
+    
+    sleep 0.5
+    exit 0
+}
+
+trap cleanup SIGINT SIGTERM EXIT
+
+# Initial cleanup to ensure a fresh state
+echo "Checking for stale audio modules..."
+MOD_IDS=$(pactl list modules short | grep "module-remap-source" | grep "MPV_Share_Audio" | awk '{print $1}')
+for id in $MOD_IDS; do
+    echo "Cleaning up stale module ID: $id"
+    pactl unload-module "$id" 2>/dev/null
+done
+
+if [ ! -f "$1" ]; then
+    echo "Usage: $0 <video-file>"
+    exit 1
+fi
+
+echo "Setting up audio routing..."
+DEFAULT_SINK=$(pactl get-default-sink)
+REMAP_ID=$(pactl load-module module-remap-source \
+    master="${DEFAULT_SINK}.monitor" \
+    source_name=MPV_Share_Audio \
+    source_properties=device.description="MPV_Share_Audio")
+
+echo "Starting mpv player..."
+mpv --title="MPV Share" \
+    --geometry=1280x720 \
+    --ontop \
+    "$1" &
+MPVPID=$!
+
+sleep 2
+
+# Get mpv window geometry
+GEOM=$(hyprctl clients -j | jq -r '.[] | select(.title == "MPV Share") | "\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"' | head -1)
+
+if [ -z "$GEOM" ] || [ "$GEOM" == "null,null 0x0" ]; then
+    echo "Warning: Could not auto-detect mpv window. Using manual selection (slurp)..."
+    GEOM=$(slurp)
+fi
+
+# Ensure even dimensions
+X=$(echo "$GEOM" | cut -d',' -f1)
+Y=$(echo "$GEOM" | cut -d',' -f2 | cut -d' ' -f1)
+W=$(echo "$GEOM" | cut -d' ' -f2 | cut -d'x' -f1)
+H=$(echo "$GEOM" | cut -d' ' -f2 | cut -d'x' -f2)
+W=$((W / 2 * 2))
+H=$((H / 2 * 2))
+GEOM="${X},${Y} ${W}x${H}"
+
+echo "Capturing region: $GEOM to $DEVICE"
+echo "Format: rawvideo (YUV420P)"
+
+# Stream to v4l2 device
+# IMPORTANT: We use rawvideo because browsers usually ignore compressed (H264) camera sources
+wf-recorder -r 30 --geometry "$GEOM" -c rawvideo --pixel-format yuv420p -m v4l2 -f "$DEVICE" >> "$LOG_FILE" 2>&1 &
+WFPID=$!
+
+echo ""
+echo "=========================================="
+echo "MPV Share is running!"
+echo "=========================================="
+echo "1. Restart your browser if camera is missing"
+echo "2. Select 'MPV Virtual Cam' in settings"
+echo "3. Press Ctrl+C here to stop"
+echo "=========================================="
+
+wait $MPVPID
