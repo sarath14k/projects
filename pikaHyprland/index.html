@@ -5,72 +5,87 @@
     <title>MeetShare Pro - Mission Control</title>
     <style>
         :root { --neon: #00f2ff; --bg: #0a0a0c; --card: #16161a; --red: #ff4444; --green: #00ff88; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; margin: 0; padding: 2rem 0; }
-        .card { background: var(--card); padding: 2rem; border-radius: 20px; box-shadow: 0 0 30px rgba(0, 242, 255, 0.1); border: 1px solid rgba(0, 242, 255, 0.2); text-align: center; max-width: 450px; width: 90%; margin-bottom: 2rem; }
-        h1 { font-size: 1.5rem; margin-bottom: 1.5rem; color: var(--neon); text-transform: uppercase; letter-spacing: 2px; }
-        button { background: linear-gradient(45deg, #00f2ff, #0072ff); border: none; padding: 12px 24px; color: white; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 1rem; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 114, 255, 0.3); }
-        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 114, 255, 0.5); }
-        .btn-mute { background: #222; border: 1px solid #444; }
-        .btn-muted { background: var(--red) !important; color: white; }
-        .volume-container { margin-top: 1.5rem; border-top: 1px solid #333; padding-top: 1rem; }
-        input[type=range] { width: 100%; accent-color: var(--neon); cursor: pointer; }
-        .vol-label { font-size: 0.8rem; color: #aaa; margin-bottom: 0.5rem; display: block; }
-        
-        /* Console Styles */
-        .console { background: #000; border: 1px solid #333; border-radius: 10px; width: 90%; max-width: 450px; height: 200px; padding: 1rem; font-family: 'Courier New', Courier, monospace; font-size: 0.8rem; overflow-y: auto; text-align: left; box-shadow: inset 0 0 10px rgba(0,242,255,0.05); }
-        .log-entry { margin-bottom: 4px; border-left: 2px solid var(--neon); padding-left: 8px; color: #ccc; }
-        .log-time { color: var(--neon); font-weight: bold; margin-right: 8px; }
+        body { background: var(--bg); color: white; font-family: 'Inter', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; margin: 0; padding: 2rem 0; overflow-x: hidden; }
+        .card { background: var(--card); padding: 2rem; border-radius: 20px; box-shadow: 0 0 40px rgba(0, 242, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); text-align: center; max-width: 450px; width: 90%; margin-bottom: 2rem; backdrop-filter: blur(10px); }
+        h1 { font-size: 1.5rem; margin-bottom: 1.5rem; color: var(--neon); text-transform: uppercase; letter-spacing: 2px; font-weight: 800; }
+        button { background: linear-gradient(135deg, #00f2ff, #0072ff); border: none; padding: 14px 24px; color: white; border-radius: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 1rem; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 15px rgba(0, 114, 255, 0.2); }
+        button:active { transform: scale(0.98); }
+        .btn-mute { background: #222; border: 1px solid #333; box-shadow: none; }
+        .btn-muted { background: var(--red) !important; box-shadow: 0 0 15px rgba(255, 68, 68, 0.3); }
+        .volume-container { margin-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 1rem; }
+        input[type=range] { width: 100%; accent-color: var(--neon); cursor: pointer; height: 6px; border-radius: 5px; background: #333; outline: none; }
+        .vol-label { font-size: 0.8rem; color: #888; margin-bottom: 0.8rem; display: block; font-weight: 600; }
+        .console { background: #000; border: 1px solid #222; border-radius: 12px; width: 90%; max-width: 450px; height: 220px; padding: 1rem; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 0.75rem; overflow-y: auto; text-align: left; scroll-behavior: smooth; }
+        .log-entry { margin-bottom: 6px; padding-left: 10px; color: #aaa; border-left: 2px solid #333; transition: all 0.3s; }
+        .log-entry:last-child { border-left-color: var(--neon); color: #eee; }
+        .log-time { color: var(--neon); margin-right: 10px; opacity: 0.8; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div class="card">
         <h1>MeetShare Pro</h1>
-        <button onclick="launch()">🎬 Open Video in MPV</button>
-        <button id="muteBtn" class="btn-mute" onclick="toggleMic()">🎤 Mic: ACTIVE</button>
-        <button onclick="sync()" style="background: #222; border: 1px solid #444; opacity: 0.7;">🔄 Sync Matrix</button>
+        <button onclick="api('launch_mpv')">🎬 Open Video in MPV</button>
+        <button id="muteBtn" class="btn-mute" onclick="api('toggle_mic')">🎤 Mic: ACTIVE</button>
+        <button onclick="api('link_audio')" style="background: #1a1a1d; color: #666; font-size: 0.8rem;">🔄 Manual Matrix Sync</button>
         
         <div class="volume-container">
-            <span class="vol-label">Video Volume: <span id="vol-val">100</span>%</span>
-            <input type="range" min="0" max="100" value="100" oninput="setVolume(this.value)">
+            <span class="vol-label">Volume: <span id="vol-val" style="color: var(--neon)">100</span>%</span>
+            <input type="range" min="0" max="100" value="100" oninput="setVol(this.value)">
         </div>
     </div>
 
-    <div id="console" class="console">
-        <div class="log-entry"><span class="log-time">System</span> Welcome to MeetShare Pro Console...</div>
-    </div>
+    <div id="console" class="console"></div>
 
     <script>
-        const API = "http://127.0.0.1:9999/api";
-        
-        function launch() { fetch(`${API}/launch_mpv`); }
-        function sync() { fetch(`${API}/link_audio`); }
-        function toggleMic() {
-            fetch(`${API}/toggle_mic`).then(r => r.json()).then(d => {
-                const btn = document.getElementById('muteBtn');
-                btn.innerText = d.active ? "🎤 Mic: ACTIVE" : "🔇 Mic: MUTED";
-                btn.className = d.active ? "btn-mute" : "btn-mute btn-muted";
-            });
-        }
-        function setVolume(val) {
-            document.getElementById('vol-val').innerText = val;
-            fetch(`${API}/set_volume?val=${val}`);
+        const API = `http://${window.location.hostname}:9999/api`;
+        let lastLog = "";
+
+        async function api(cmd) {
+            const r = await fetch(`${API}/${cmd}`);
+            const d = await r.json();
+            if(d.mic_active !== undefined) updateMic(d.mic_active);
+            update();
         }
 
-        // Live Log Updates
-function updateVolume() { fetch(`${API}/get_volume`).then(r => r.json()).then(d => { document.getElementById("vol-val").innerText = Math.round(d.volume); document.querySelector("input[type=range]").value = d.volume; }); }
-        function updateLogs() {
-            fetch(`${API}/logs`).then(r => r.json()).then(d => {
-                const con = document.getElementById('console');
-                con.innerHTML = d.logs.map(log => {
-                    const parts = log.split('] ');
-                    return `<div class="log-entry"><span class="log-time">${parts[0].replace('[','')}</span> ${parts[1]}</div>`;
-                }).join('');
-                con.scrollTop = con.scrollHeight;
-            });
+        function setVol(v) {
+            document.getElementById('vol-val').innerText = v;
+            fetch(`${API}/set_volume?val=${v}`);
         }
 
-        setInterval(() => { updateLogs(); updateVolume(); }, 2000);
-        updateLogs();
+        function updateMic(active) {
+            const b = document.getElementById('muteBtn');
+            b.innerText = active ? "🎤 Mic: ACTIVE" : "🔇 Mic: MUTED";
+            b.className = active ? "btn-mute" : "btn-mute btn-muted";
+        }
+
+        async function update() {
+            try {
+                // Poll Logs
+                const lr = await fetch(`${API}/logs`);
+                const ld = await lr.json();
+                const newLogs = JSON.stringify(ld.logs);
+                if(newLogs !== lastLog) {
+                    const c = document.getElementById('console');
+                    c.innerHTML = ld.logs.map(l => {
+                        const [t, m] = l.split('] ');
+                        return `<div class="log-entry"><span class="log-time">${t.slice(1)}</span>${m}</div>`;
+                    }).join('');
+                    c.scrollTop = c.scrollHeight;
+                    lastLog = newLogs;
+                }
+                // Poll Volume
+                const vr = await fetch(`${API}/get_volume`);
+                const vd = await vr.json();
+                const vol = Math.round(vd.volume);
+                document.getElementById('vol-val').innerText = vol;
+                document.querySelector('input[type=range]').value = vol;
+            } catch(e) {}
+        }
+
+        setInterval(update, 1500);
+        update();
     </script>
 </body>
 </html>

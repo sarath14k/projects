@@ -3,33 +3,33 @@ import socketserver
 import subprocess
 import os
 import sys
-import argparse
 import time
 import json
 import socket
 from threading import Thread
 from datetime import datetime
 
-# Configuration
+# Performance Constants
 PORT = 9999
 IPC_SOCKET = "/tmp/meetshare-mpv.sock"
-mic_active = True
-logs = []
+MAX_LOGS = 25
+
+# Global State
+state = {
+    "mic_active": True,
+    "logs": [],
+    "last_sync": 0
+}
 
 def add_log(msg):
-    global logs
     timestamp = datetime.now().strftime("%H:%M:%S")
-    logs.append(f"[{timestamp}] {msg}")
-    if len(logs) > 20: logs.pop(0)
-    print(f"LOG: {msg}")
+    entry = f"[{timestamp}] {msg}"
+    state["logs"].append(entry)
+    if len(state["logs"]) > MAX_LOGS: state["logs"].pop(0)
+    print(entry)
 
-class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
-    daemon_threads = True
-    allow_reuse_address = True
-
-class StreamHandler(http.server.SimpleHTTPRequestHandler):
+class FastAPIHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
-        self.send_header('Access-Control-Origin', '*')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, Access-Control-Allow-Private-Network')
@@ -40,138 +40,117 @@ class StreamHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(204); self.end_headers()
 
     def do_GET(self):
-        global mic_active, logs
-        if self.path == '/':
-            self.send_response(200); self.send_header('Content-type', 'text/html'); self.end_headers()
-            try:
-                base_dir = os.path.dirname(os.path.abspath(__file__))
-                with open(os.path.join(base_dir, 'index.html'), 'rb') as f: self.wfile.write(f.read())
-            except: self.wfile.write(b"MeetShare Active")
-        elif self.path == '/api/link_audio':
-            self.handle_api(self.link_audio_ports)
-        elif self.path == '/api/launch_mpv':
-            self.handle_api(self.launch_mpv_logic)
-        elif self.path == '/api/toggle_mic':
-            mic_active = not mic_active
-            add_log(f"Mic toggled: {'ACTIVE' if mic_active else 'MUTED'}")
-            self.link_audio_ports()
-            self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
-            self.wfile.write(json.dumps({"status": "ok", "active": mic_active}).encode())
-        elif self.path == '/api/logs':
-            self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
-            self.wfile.write(json.dumps({"logs": logs}).encode())
-        elif self.path == '/api/get_volume':
-            self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
-            self.wfile.write(json.dumps({"volume": self.query_mpv("volume")}).encode())
-        elif self.path.startswith('/api/vol_up'):
-            self.change_volume(5)
-        elif self.path.startswith('/api/vol_down'):
-            self.change_volume(-5)
-        elif self.path.startswith('/api/set_volume'):
-            vol = self.path.split('=')[-1]
-            self.set_volume_raw(vol)
-        else:
-            self.send_response(404); self.end_headers()
+        path = self.path
+        if path == '/': self.serve_file('index.html', 'text/html')
+        elif path == '/api/link_audio': self.json_resp(self.server.engine.sync())
+        elif path == '/api/launch_mpv': self.json_resp(self.server.engine.launch())
+        elif path == '/api/toggle_mic': self.json_resp(self.server.engine.toggle_mic())
+        elif path == '/api/logs': self.json_resp({"logs": state["logs"]})
+        elif path == '/api/get_volume': self.json_resp({"volume": self.server.engine.query_mpv("volume")})
+        elif '/api/vol_' in path: self.json_resp(self.server.engine.change_volume(5 if 'up' in path else -5))
+        elif '/api/set_volume' in path: self.json_resp(self.server.engine.set_volume(path.split('=')[-1]))
+        else: self.send_error(404)
 
+    def serve_file(self, filename, content_type):
+        try:
+            with open(os.path.join(os.path.dirname(__file__), filename), 'rb') as f:
+                self.send_response(200); self.send_header('Content-type', content_type); self.end_headers()
+                self.wfile.write(f.read())
+        except: self.send_error(404)
+
+    def json_resp(self, data):
+        self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
+        self.wfile.write(json.dumps(data).encode())
+
+class MeetEngine:
     def query_mpv(self, prop):
         try:
-            cmd = f'{{"command": ["get_property", "{prop}"]}}\n'
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-                s.settimeout(0.2)
-                s.connect(IPC_SOCKET)
-                s.sendall(cmd.encode())
-                resp = s.recv(1024).decode()
-                return json.loads(resp).get('data', 100)
+                s.settimeout(0.1); s.connect(IPC_SOCKET)
+                s.sendall(json.dumps({"command": ["get_property", prop]}).encode() + b'\n')
+                return json.loads(s.recv(1024).decode()).get('data', 100)
         except: return 100
 
+    def set_volume(self, vol):
+        return self.send_mpv_cmd(["set_property", "volume", int(vol)], f"Volume: {vol}%")
+
     def change_volume(self, delta):
+        return self.send_mpv_cmd(["add", "volume", delta], f"Volume adjusted")
+
+    def send_mpv_cmd(self, cmd_list, log_msg):
         try:
-            cmd = f'{{"command": ["add", "volume", {delta}]}}\n'
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
                 s.connect(IPC_SOCKET)
-                s.sendall(cmd.encode())
-            add_log(f"Volume {'up' if delta > 0 else 'down'} by {abs(delta)}%")
-            self.send_response(200); self.end_headers()
-        except: self.send_response(500); self.end_headers()
+                s.sendall(json.dumps({"command": cmd_list}).encode() + b'\n')
+            add_log(log_msg); return {"status": "ok"}
+        except: return {"status": "error"}
 
-    def set_volume_raw(self, vol):
-        try:
-            cmd = f'{{"command": ["set_property", "volume", {vol}]}}\n'
-            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-                s.connect(IPC_SOCKET)
-                s.sendall(cmd.encode())
-            add_log(f"Volume set to {vol}%")
-            self.send_response(200); self.end_headers()
-        except: self.send_response(500); self.end_headers()
+    def toggle_mic(self):
+        state["mic_active"] = not state["mic_active"]
+        add_log(f"Mic: {'ENABLED' if state['mic_active'] else 'MUTED'}")
+        return self.sync()
 
-    def handle_api(self, logic_func):
+    def sync(self):
         try:
-            result = logic_func()
-            self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
-            self.wfile.write(json.dumps(result).encode())
+            # Batch port discovery
+            out_p = subprocess.check_output(['pw-link', '-o']).decode().lower().splitlines()
+            in_p = subprocess.check_output(['pw-link', '-i']).decode().lower().splitlines()
+            
+            # Smart filtering
+            mpv_o = [p for p in out_p if 'mpv' in p]
+            web_o = [p for p in out_p if any(x in p for x in ['webcam', 'c270'])]
+            brw_o = [p for p in out_p if any(x in p for x in ['chrome', 'firefox', 'brave'])]
+            
+            brw_i = [p for p in in_p if any(x in p for x in ['chrome', 'firefox', 'brave'])]
+            hds_i = [p for p in in_p if any(x in p for x in ['boult', 'bluez', 'airbass'])]
+            
+            # Perform linking
+            links = 0
+            # 1. Clear Mic first
+            for w in web_o:
+                for b in brw_i: subprocess.run(['pw-link', '-d', w, b], stderr=subprocess.DEVNULL)
+            
+            # 2. Build Matrix
+            if state["mic_active"]:
+                for w in web_o: 
+                    for b in brw_i: subprocess.run(['pw-link', w, b]); links += 1
+            
+            for m in mpv_o:
+                for b in brw_i: subprocess.run(['pw-link', m, b]); links += 1
+                for h in hds_i: subprocess.run(['pw-link', m, h]); links += 1
+                
+            for b in brw_o:
+                for h in hds_i: subprocess.run(['pw-link', b, h]); links += 1
+
+            add_log(f"Matrix Synced. Active Links: {links}")
+            subprocess.run(['notify-send', '-t', '1500', 'MeetShare Pro', f'Matrix Synced ({links} links)'])
+            return {"status": "success", "links": links, "mic_active": state["mic_active"]}
         except Exception as e:
-            self.send_response(500); self.end_headers()
-            self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode())
+            add_log(f"Sync Error: {str(e)}"); return {"status": "error"}
 
-    def link_audio_ports(self):
-        global mic_active
-        links = 0
+    def launch(self):
         try:
-            out_ports = subprocess.check_output(['pw-link', '-o']).decode().splitlines()
-            in_ports = subprocess.check_output(['pw-link', '-i']).decode().splitlines()
+            file = subprocess.check_output(['zenity', '--file-selection']).decode().strip()
+            if os.path.exists(IPC_SOCKET): os.remove(IPC_SOCKET)
+            proc = subprocess.Popen(['mpv', f'--input-ipc-server={IPC_SOCKET}', '--title=MeetShare_MPV', '--ao=pipewire', file])
+            add_log(f"Launched: {os.path.basename(file)}")
             
-            mpv_out = [p for p in out_ports if 'mpv' in p.lower()]
-            webcam_out = [p for p in out_ports if 'webcam' in p.lower() or 'c270' in p.lower()]
-            chrome_out = [p for p in out_ports if any(x in p.lower() for x in ['chrome', 'chromium', 'brave', 'firefox'])]
-            chrome_in = [p for p in in_ports if any(x in p.lower() for x in ['chrome', 'chromium', 'brave', 'firefox'])]
-            headset_in = [p for p in in_ports if any(x in p.lower() for x in ['boult', 'airbass', 'bluez'])]
+            def monitor():
+                proc.wait()
+                add_log("MPV Closed. Auto-Cleanup...")
+                self.sync()
+            Thread(target=monitor, daemon=True).start()
             
-            for w in webcam_out:
-                for c in chrome_in: subprocess.run(['pw-link', '-d', w, c], stderr=subprocess.DEVNULL)
+            time.sleep(1.5); return self.sync()
+        except: return {"status": "error"}
 
-            for m in mpv_out:
-                for c in chrome_in: 
-                    if subprocess.run(['pw-link', m, c]).returncode == 0: links += 1
-            
-            if mic_active:
-                for w in webcam_out:
-                    for c in chrome_in: 
-                        if subprocess.run(['pw-link', w, c]).returncode == 0: links += 1
-            
-            for m in mpv_out:
-                for h in headset_in: 
-                    if subprocess.run(['pw-link', m, h]).returncode == 0: links += 1
-            for c_o in chrome_out:
-                for h in headset_in: 
-                    if subprocess.run(['pw-link', c_o, h]).returncode == 0: links += 1
-                    
-        except Exception as e:
-            add_log(f"Error: {str(e)}")
-            subprocess.run(['notify-send', 'MeetShare Error', str(e)])
-            
-        status_msg = "✅ Matrix Synced" if mic_active else "🤫 Mic Muted"
-        subprocess.run(['notify-send', '-i', 'audio-speakers', 'MeetShare Pro', status_msg])
-            
-        return {"status": "success", "links": links, "mic_active": mic_active}
-
-    def launch_mpv_logic(self):
-        file = subprocess.check_output(['zenity', '--file-selection']).decode().strip()
-        add_log(f"Launching video: {os.path.basename(file)}")
-        if os.path.exists(IPC_SOCKET): os.remove(IPC_SOCKET)
-        proc = subprocess.Popen(['mpv', f'--input-ipc-server={IPC_SOCKET}', '--title=MeetShare_MPV', '--ao=pipewire', file])
-        
-        def monitor():
-            proc.wait()
-            add_log("MPV Closed. Cleaning up...")
-            subprocess.run(['notify-send', 'MeetShare Pro', '🎬 Video Closed. Cleaning up...'])
-            self.link_audio_ports()
-            
-        Thread(target=monitor, daemon=True).start()
-        time.sleep(2.0)
-        self.link_audio_ports()
-        return {"status": "success", "file": os.path.basename(file)}
+class MeetServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    daemon_threads = True
+    def __init__(self, addr, handler):
+        self.engine = MeetEngine()
+        super().__init__(addr, handler)
 
 if __name__ == "__main__":
-    add_log("MeetShare Bridge Started on port 9999")
-    with ThreadedHTTPServer(("0.0.0.0", PORT), StreamHandler) as httpd:
+    add_log("MeetShare Optimized Engine Started")
+    with MeetServer(("0.0.0.0", PORT), FastAPIHandler) as httpd:
         httpd.serve_forever()
