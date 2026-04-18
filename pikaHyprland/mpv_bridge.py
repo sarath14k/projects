@@ -51,13 +51,6 @@ class FastAPIHandler(http.server.SimpleHTTPRequestHandler):
         elif '/api/set_volume' in path: self.json_resp(self.server.engine.set_volume(path.split('=')[-1]))
         else: self.send_error(404)
 
-    def serve_file(self, filename, content_type):
-        try:
-            with open(os.path.join(os.path.dirname(__file__), filename), 'rb') as f:
-                self.send_response(200); self.send_header('Content-type', content_type); self.end_headers()
-                self.wfile.write(f.read())
-        except: self.send_error(404)
-
     def json_resp(self, data):
         self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
         self.wfile.write(json.dumps(data).encode())
@@ -92,25 +85,28 @@ class MeetEngine:
 
     def sync(self):
         try:
-            # Batch port discovery (KEEP ORIGINAL CASE)
+            # Batch port discovery
             out_p = subprocess.check_output(['pw-link', '-o']).decode().splitlines()
             in_p = subprocess.check_output(['pw-link', '-i']).decode().splitlines()
             
-            # Smart filtering with lowercase check but original result
             mpv_o = [p for p in out_p if 'mpv' in p.lower()]
             web_o = [p for p in out_p if any(x in p.lower() for x in ['webcam', 'c270'])]
             brw_o = [p for p in out_p if any(x in p.lower() for x in ['chrome', 'firefox', 'brave'])]
-            
             brw_i = [p for p in in_p if any(x in p.lower() for x in ['chrome', 'firefox', 'brave'])]
             hds_i = [p for p in in_p if any(x in p.lower() for x in ['boult', 'bluez', 'airbass'])]
             
-            # Perform linking
-            links = 0
-            # 1. Clear Mic first
-            for w in web_o:
-                for b in brw_i: subprocess.run(['pw-link', '-d', w, b], stderr=subprocess.DEVNULL)
-            
+            # 1. CLEAN START: Unlink MPV from EVERYTHING (to stop speaker leak)
+            for m in mpv_o:
+                try:
+                    current = subprocess.check_output(['pw-link', '-l', m], stderr=subprocess.DEVNULL).decode().splitlines()
+                    for line in current:
+                        if '|->' in line:
+                            target = line.split('|->')[1].strip()
+                            subprocess.run(['pw-link', '-d', m, target])
+                except: pass
+
             # 2. Build Matrix
+            links = 0
             if state["mic_active"]:
                 for w in web_o: 
                     for b in brw_i: subprocess.run(['pw-link', w, b]); links += 1
@@ -128,7 +124,7 @@ class MeetEngine:
                         subprocess.run(['pw-link', b, h])
                         links += 1
 
-            add_log(f"Matrix Synced. Active Links: {links}")
+            add_log(f"Matrix Synced. Links: {links}")
             subprocess.run(['notify-send', '-t', '1500', 'MeetShare Pro', f'Matrix Synced ({links} links)'])
             return {"status": "success", "links": links, "mic_active": state["mic_active"]}
         except Exception as e:
@@ -157,6 +153,6 @@ class MeetServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         super().__init__(addr, handler)
 
 if __name__ == "__main__":
-    add_log("MeetShare Engine Fixed")
+    add_log("MeetShare Engine Restarted")
     with MeetServer(("0.0.0.0", PORT), FastAPIHandler) as httpd:
         httpd.serve_forever()
