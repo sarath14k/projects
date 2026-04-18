@@ -5,18 +5,21 @@
     <title>MeetShare Pro - Mission Control</title>
     <style>
         :root { --neon: #00f2ff; --bg: #0a0a0c; --card: #16161a; --red: #ff4444; --green: #00ff88; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .card { background: var(--card); padding: 2rem; border-radius: 20px; box-shadow: 0 0 30px rgba(0, 242, 255, 0.1); border: 1px solid rgba(0, 242, 255, 0.2); text-align: center; max-width: 400px; width: 90%; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; margin: 0; padding: 2rem 0; }
+        .card { background: var(--card); padding: 2rem; border-radius: 20px; box-shadow: 0 0 30px rgba(0, 242, 255, 0.1); border: 1px solid rgba(0, 242, 255, 0.2); text-align: center; max-width: 450px; width: 90%; margin-bottom: 2rem; }
         h1 { font-size: 1.5rem; margin-bottom: 1.5rem; color: var(--neon); text-transform: uppercase; letter-spacing: 2px; }
         button { background: linear-gradient(45deg, #00f2ff, #0072ff); border: none; padding: 12px 24px; color: white; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 1rem; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 114, 255, 0.3); }
         button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 114, 255, 0.5); }
         .btn-mute { background: #222; border: 1px solid #444; }
         .btn-muted { background: var(--red) !important; color: white; }
-        .status { font-size: 0.9rem; color: #888; margin-top: 1rem; }
-        .active { color: var(--green); }
-        .volume-container { margin-top: 2rem; border-top: 1px solid #333; padding-top: 1.5rem; }
+        .volume-container { margin-top: 1.5rem; border-top: 1px solid #333; padding-top: 1rem; }
         input[type=range] { width: 100%; accent-color: var(--neon); cursor: pointer; }
         .vol-label { font-size: 0.8rem; color: #aaa; margin-bottom: 0.5rem; display: block; }
+        
+        /* Console Styles */
+        .console { background: #000; border: 1px solid #333; border-radius: 10px; width: 90%; max-width: 450px; height: 200px; padding: 1rem; font-family: 'Courier New', Courier, monospace; font-size: 0.8rem; overflow-y: auto; text-align: left; box-shadow: inset 0 0 10px rgba(0,242,255,0.05); }
+        .log-entry { margin-bottom: 4px; border-left: 2px solid var(--neon); padding-left: 8px; color: #ccc; }
+        .log-time { color: var(--neon); font-weight: bold; margin-right: 8px; }
     </style>
 </head>
 <body>
@@ -30,37 +33,43 @@
             <span class="vol-label">Video Volume: <span id="vol-val">100</span>%</span>
             <input type="range" min="0" max="100" value="100" oninput="setVolume(this.value)">
         </div>
+    </div>
 
-        <div id="status" class="status">System Ready</div>
+    <div id="console" class="console">
+        <div class="log-entry"><span class="log-time">System</span> Welcome to MeetShare Pro Console...</div>
     </div>
 
     <script>
         const API = "http://127.0.0.1:9999/api";
-        function launch() {
-            fetch(`${API}/launch_mpv`).then(r => r.json()).then(d => {
-                document.getElementById('status').innerHTML = `Playing: <span class='active'>${d.file}</span>`;
-            });
-        }
-        function sync() {
-            fetch(`${API}/link_audio`).then(r => r.json()).then(d => {
-                document.getElementById('status').innerHTML = `<span class='active'>Matrix Synced</span>`;
-                updateMicUI(d.mic_active);
-            });
-        }
+        
+        function launch() { fetch(`${API}/launch_mpv`); }
+        function sync() { fetch(`${API}/link_audio`); }
         function toggleMic() {
             fetch(`${API}/toggle_mic`).then(r => r.json()).then(d => {
-                updateMicUI(d.active);
+                const btn = document.getElementById('muteBtn');
+                btn.innerText = d.active ? "🎤 Mic: ACTIVE" : "🔇 Mic: MUTED";
+                btn.className = d.active ? "btn-mute" : "btn-mute btn-muted";
             });
-        }
-        function updateMicUI(active) {
-            const btn = document.getElementById('muteBtn');
-            btn.innerText = active ? "🎤 Mic: ACTIVE" : "🔇 Mic: MUTED";
-            btn.className = active ? "btn-mute" : "btn-mute btn-muted";
         }
         function setVolume(val) {
             document.getElementById('vol-val').innerText = val;
             fetch(`${API}/set_volume?val=${val}`);
         }
+
+        // Live Log Updates
+        function updateLogs() {
+            fetch(`${API}/logs`).then(r => r.json()).then(d => {
+                const con = document.getElementById('console');
+                con.innerHTML = d.logs.map(log => {
+                    const parts = log.split('] ');
+                    return `<div class="log-entry"><span class="log-time">${parts[0].replace('[','')}</span> ${parts[1]}</div>`;
+                }).join('');
+                con.scrollTop = con.scrollHeight;
+            });
+        }
+
+        setInterval(updateLogs, 2000);
+        updateLogs();
     </script>
 </body>
 </html>
