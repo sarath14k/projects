@@ -37,11 +37,15 @@ If you ever reinstall your OS, follow these simple steps:
     ./install.sh
     ```
 3.  **Setup the Browser Extension**:
-    - Go to `chrome://extensions`
-    - Enable **Developer Mode**.
-    - Click **Load unpacked** and select the `meet_extension` folder inside this directory.
+    - **For Chrome**: Go to `chrome://extensions`, enable **Developer Mode**, and click **Load unpacked**.
+    - **For Firefox**: Go to `about:debugging`, click **This Firefox**, and click **Load Temporary Add-on...**
+    - Select the `meet_extension` folder inside this directory.
 
 ---
+
+## 🦊 Firefox Tips
+- **No Extension Needed**: The dashboard at `http://127.0.0.1:9999/` works in Firefox natively without any setup!
+- **Temporary Add-ons**: Firefox removes temporary extensions when you restart the browser. To keep it permanently, just use the dashboard link.
 
 ## 📂 Project Structure
 - `mpv_bridge.py`: The Python backend (Bridge).
