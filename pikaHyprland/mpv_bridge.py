@@ -29,6 +29,7 @@ class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 class StreamHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
+        self.send_header('Access-Control-Origin', '*')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, Access-Control-Allow-Private-Network')
@@ -59,6 +60,9 @@ class StreamHandler(http.server.SimpleHTTPRequestHandler):
         elif self.path == '/api/logs':
             self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
             self.wfile.write(json.dumps({"logs": logs}).encode())
+        elif self.path == '/api/get_volume':
+            self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
+            self.wfile.write(json.dumps({"volume": self.query_mpv("volume")}).encode())
         elif self.path.startswith('/api/vol_up'):
             self.change_volume(5)
         elif self.path.startswith('/api/vol_down'):
@@ -68,6 +72,17 @@ class StreamHandler(http.server.SimpleHTTPRequestHandler):
             self.set_volume_raw(vol)
         else:
             self.send_response(404); self.end_headers()
+
+    def query_mpv(self, prop):
+        try:
+            cmd = f'{{"command": ["get_property", "{prop}"]}}\n'
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+                s.settimeout(0.2)
+                s.connect(IPC_SOCKET)
+                s.sendall(cmd.encode())
+                resp = s.recv(1024).decode()
+                return json.loads(resp).get('data', 100)
+        except: return 100
 
     def change_volume(self, delta):
         try:

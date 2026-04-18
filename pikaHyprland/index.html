@@ -57,6 +57,7 @@
         }
 
         // Live Log Updates
+function updateVolume() { fetch(`${API}/get_volume`).then(r => r.json()).then(d => { document.getElementById("vol-val").innerText = Math.round(d.volume); document.querySelector("input[type=range]").value = d.volume; }); }
         function updateLogs() {
             fetch(`${API}/logs`).then(r => r.json()).then(d => {
                 const con = document.getElementById('console');
@@ -68,7 +69,7 @@
             });
         }
 
-        setInterval(updateLogs, 2000);
+        setInterval(() => { updateLogs(); updateVolume(); }, 2000);
         updateLogs();
     </script>
 </body>
