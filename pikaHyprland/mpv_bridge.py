@@ -92,17 +92,17 @@ class MeetEngine:
 
     def sync(self):
         try:
-            # Batch port discovery
-            out_p = subprocess.check_output(['pw-link', '-o']).decode().lower().splitlines()
-            in_p = subprocess.check_output(['pw-link', '-i']).decode().lower().splitlines()
+            # Batch port discovery (KEEP ORIGINAL CASE)
+            out_p = subprocess.check_output(['pw-link', '-o']).decode().splitlines()
+            in_p = subprocess.check_output(['pw-link', '-i']).decode().splitlines()
             
-            # Smart filtering
-            mpv_o = [p for p in out_p if 'mpv' in p]
-            web_o = [p for p in out_p if any(x in p for x in ['webcam', 'c270'])]
-            brw_o = [p for p in out_p if any(x in p for x in ['chrome', 'firefox', 'brave'])]
+            # Smart filtering with lowercase check but original result
+            mpv_o = [p for p in out_p if 'mpv' in p.lower()]
+            web_o = [p for p in out_p if any(x in p.lower() for x in ['webcam', 'c270'])]
+            brw_o = [p for p in out_p if any(x in p.lower() for x in ['chrome', 'firefox', 'brave'])]
             
-            brw_i = [p for p in in_p if any(x in p for x in ['chrome', 'firefox', 'brave'])]
-            hds_i = [p for p in in_p if any(x in p for x in ['boult', 'bluez', 'airbass'])]
+            brw_i = [p for p in in_p if any(x in p.lower() for x in ['chrome', 'firefox', 'brave'])]
+            hds_i = [p for p in in_p if any(x in p.lower() for x in ['boult', 'bluez', 'airbass'])]
             
             # Perform linking
             links = 0
@@ -118,14 +118,13 @@ class MeetEngine:
             for m in mpv_o:
                 for b in brw_i: subprocess.run(['pw-link', m, b]); links += 1
                 for h in hds_i: 
-                    # Only link to relevant playback ports
-                    if 'playback' in h:
+                    if 'playback' in h.lower():
                         subprocess.run(['pw-link', m, h])
                         links += 1
                 
             for b in brw_o:
                 for h in hds_i: 
-                    if 'playback' in h:
+                    if 'playback' in h.lower():
                         subprocess.run(['pw-link', b, h])
                         links += 1
 
@@ -158,6 +157,6 @@ class MeetServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         super().__init__(addr, handler)
 
 if __name__ == "__main__":
-    add_log("MeetShare Optimized Engine Started")
+    add_log("MeetShare Engine Fixed")
     with MeetServer(("0.0.0.0", PORT), FastAPIHandler) as httpd:
         httpd.serve_forever()
