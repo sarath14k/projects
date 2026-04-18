@@ -39,6 +39,18 @@ class FastAPIHandler(http.server.SimpleHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204); self.end_headers()
 
+    def serve_file(self, filename, content_type):
+        try:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            with open(os.path.join(base_dir, filename), 'rb') as f:
+                self.send_response(200); self.send_header('Content-type', content_type); self.end_headers()
+                self.wfile.write(f.read())
+        except: self.send_error(404)
+
+    def json_resp(self, data):
+        self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
+        self.wfile.write(json.dumps(data).encode())
+
     def do_GET(self):
         path = self.path
         if path == '/': self.serve_file('index.html', 'text/html')
@@ -49,11 +61,7 @@ class FastAPIHandler(http.server.SimpleHTTPRequestHandler):
         elif path == '/api/get_volume': self.json_resp({"volume": self.server.engine.query_mpv("volume")})
         elif '/api/vol_' in path: self.json_resp(self.server.engine.change_volume(5 if 'up' in path else -5))
         elif '/api/set_volume' in path: self.json_resp(self.server.engine.set_volume(path.split('=')[-1]))
-        else: self.send_error(404)
-
-    def json_resp(self, data):
-        self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
-        self.wfile.write(json.dumps(data).encode())
+        else: super().do_GET()
 
 class MeetEngine:
     def query_mpv(self, prop):
@@ -85,17 +93,14 @@ class MeetEngine:
 
     def sync(self):
         try:
-            # Batch port discovery
             out_p = subprocess.check_output(['pw-link', '-o']).decode().splitlines()
             in_p = subprocess.check_output(['pw-link', '-i']).decode().splitlines()
-            
             mpv_o = [p for p in out_p if 'mpv' in p.lower()]
             web_o = [p for p in out_p if any(x in p.lower() for x in ['webcam', 'c270'])]
             brw_o = [p for p in out_p if any(x in p.lower() for x in ['chrome', 'firefox', 'brave'])]
             brw_i = [p for p in in_p if any(x in p.lower() for x in ['chrome', 'firefox', 'brave'])]
             hds_i = [p for p in in_p if any(x in p.lower() for x in ['boult', 'bluez', 'airbass'])]
             
-            # 1. CLEAN START: Unlink MPV from EVERYTHING (to stop speaker leak)
             for m in mpv_o:
                 try:
                     current = subprocess.check_output(['pw-link', '-l', m], stderr=subprocess.DEVNULL).decode().splitlines()
@@ -105,24 +110,19 @@ class MeetEngine:
                             subprocess.run(['pw-link', '-d', m, target])
                 except: pass
 
-            # 2. Build Matrix
             links = 0
             if state["mic_active"]:
                 for w in web_o: 
                     for b in brw_i: subprocess.run(['pw-link', w, b]); links += 1
-            
             for m in mpv_o:
                 for b in brw_i: subprocess.run(['pw-link', m, b]); links += 1
                 for h in hds_i: 
                     if 'playback' in h.lower():
-                        subprocess.run(['pw-link', m, h])
-                        links += 1
-                
+                        subprocess.run(['pw-link', m, h]); links += 1
             for b in brw_o:
                 for h in hds_i: 
                     if 'playback' in h.lower():
-                        subprocess.run(['pw-link', b, h])
-                        links += 1
+                        subprocess.run(['pw-link', b, h]); links += 1
 
             add_log(f"Matrix Synced. Links: {links}")
             subprocess.run(['notify-send', '-t', '1500', 'MeetShare Pro', f'Matrix Synced ({links} links)'])
@@ -136,13 +136,11 @@ class MeetEngine:
             if os.path.exists(IPC_SOCKET): os.remove(IPC_SOCKET)
             proc = subprocess.Popen(['mpv', f'--input-ipc-server={IPC_SOCKET}', '--title=MeetShare_MPV', '--ao=pipewire', '--sub-auto=fuzzy', file])
             add_log(f"Launched: {os.path.basename(file)}")
-            
             def monitor():
                 proc.wait()
                 add_log("MPV Closed. Auto-Cleanup...")
                 self.sync()
             Thread(target=monitor, daemon=True).start()
-            
             time.sleep(1.5); return self.sync()
         except: return {"status": "error"}
 
@@ -153,6 +151,6 @@ class MeetServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         super().__init__(addr, handler)
 
 if __name__ == "__main__":
-    add_log("MeetShare Engine Restarted")
+    add_log("MeetShare Engine Fixed")
     with MeetServer(("0.0.0.0", PORT), FastAPIHandler) as httpd:
         httpd.serve_forever()
