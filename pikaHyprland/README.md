@@ -5,10 +5,10 @@ High-performance media sharing for Google Meet on Linux (PikaOS/Hyprland). Bypas
 ---
 
 ## 🎧 Features
+- **Universal Linux Support**: Works on Ubuntu, Fedora, Arch, GNOME, KDE, and Hyprland.
 - **Pro Audio Matrix**: Simultaneous routing of your voice + video audio + meeting audio.
-- **High Quality**: Uses native `mpv` with PipeWire instead of browser-based sharing.
 - **Dual Monitoring**: Hear the video in your headset while sharing it with the meeting.
-- **Automated**: Auto-links ports every time you play a video.
+- **One-Click Install**: Handles dependencies and startup automatically.
 
 ---
 
