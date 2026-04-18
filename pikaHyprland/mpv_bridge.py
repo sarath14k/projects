@@ -101,6 +101,19 @@ class MeetEngine:
             brw_i = [p for p in in_p if any(x in p.lower() for x in ['chrome', 'firefox', 'brave'])]
             hds_i = [p for p in in_p if any(x in p.lower() for x in ['boult', 'bluez', 'airbass'])]
             
+            # 1. SPEAKER BLACKOUT: Kill every single link to HDMI (Room Speakers)
+            hdm_i = [p for p in in_p if 'hdmi' in p.lower()]
+            for target in hdm_i:
+                try:
+                    # Find what is sending audio to this HDMI port and KILL IT
+                    current = subprocess.check_output(['pw-link', '-l', target], stderr=subprocess.DEVNULL).decode().splitlines()
+                    for line in current:
+                        if '|<-' in line:
+                            source = line.split('|<-')[1].strip()
+                            subprocess.run(['pw-link', '-d', source, target])
+                except: pass
+
+            # 2. MOVIE CLEANUP: Unlink MPV from its old targets
             for m in mpv_o:
                 try:
                     current = subprocess.check_output(['pw-link', '-l', m], stderr=subprocess.DEVNULL).decode().splitlines()
@@ -114,6 +127,10 @@ class MeetEngine:
             if state["mic_active"]:
                 for w in web_o: 
                     for b in brw_i: subprocess.run(['pw-link', w, b]); links += 1
+                    # MONITORING: Force her voice into the Headset ONLY
+                    for h in hds_i:
+                        if 'playback' in h.lower():
+                            subprocess.run(['pw-link', w, h]); links += 1
             for m in mpv_o:
                 for b in brw_i: subprocess.run(['pw-link', m, b]); links += 1
                 for h in hds_i: 
