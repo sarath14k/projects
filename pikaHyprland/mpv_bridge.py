@@ -138,7 +138,7 @@ class MeetEngine:
         try:
             file = subprocess.check_output(['zenity', '--file-selection']).decode().strip()
             if os.path.exists(IPC_SOCKET): os.remove(IPC_SOCKET)
-            proc = subprocess.Popen(['mpv', f'--input-ipc-server={IPC_SOCKET}', '--title=MeetShare_MPV', '--ao=pipewire', file])
+            proc = subprocess.Popen(['mpv', f'--input-ipc-server={IPC_SOCKET}', '--title=MeetShare_MPV', '--ao=pipewire', '--sub-auto=fuzzy', file])
             add_log(f"Launched: {os.path.basename(file)}")
             
             def monitor():
