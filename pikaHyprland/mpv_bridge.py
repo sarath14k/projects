@@ -117,10 +117,17 @@ class MeetEngine:
             
             for m in mpv_o:
                 for b in brw_i: subprocess.run(['pw-link', m, b]); links += 1
-                for h in hds_i: subprocess.run(['pw-link', m, h]); links += 1
+                for h in hds_i: 
+                    # Only link to relevant playback ports
+                    if 'playback' in h:
+                        subprocess.run(['pw-link', m, h])
+                        links += 1
                 
             for b in brw_o:
-                for h in hds_i: subprocess.run(['pw-link', b, h]); links += 1
+                for h in hds_i: 
+                    if 'playback' in h:
+                        subprocess.run(['pw-link', b, h])
+                        links += 1
 
             add_log(f"Matrix Synced. Active Links: {links}")
             subprocess.run(['notify-send', '-t', '1500', 'MeetShare Pro', f'Matrix Synced ({links} links)'])
