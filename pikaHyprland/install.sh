@@ -4,7 +4,7 @@ echo "🚀 Starting MeetShare Pro Universal Installer..."
 
 # 1. Detect Package Manager and Install Dependencies
 if command -v apt &> /dev/null; then
-    sudo apt update && sudo apt install -y mpv zenity pipewire-bin python3
+    sudo apt update && sudo apt install -y mpv zenity pipewire-bin python3 libnotify-bin
 elif command -v dnf &> /dev/null; then
     sudo dnf install -y mpv zenity pipewire-utils python3
 elif command -v pacman &> /dev/null; then

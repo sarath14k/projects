@@ -102,6 +102,11 @@ class StreamHandler(http.server.SimpleHTTPRequestHandler):
                     
         except Exception as e:
             print(f"Error: {e}")
+            subprocess.run(['notify-send', 'MeetShare Error', str(e)])
+            
+        # Send Desktop Notification
+        if links > 0:
+            subprocess.run(['notify-send', '-i', 'audio-speakers', 'MeetShare Pro', '✅ Audio Matrix Synced!'])
             
         return {"status": "success", "links": links}
 
