@@ -101,16 +101,17 @@ class MeetEngine:
             brw_i = [p for p in in_p if any(x in p.lower() for x in ['chrome', 'firefox', 'brave'])]
             hds_i = [p for p in in_p if any(x in p.lower() for x in ['boult', 'bluez', 'airbass'])]
             
-            # 1. SPEAKER BLACKOUT: Kill every single link to HDMI (Room Speakers)
-            hdm_i = [p for p in in_p if 'hdmi' in p.lower()]
-            for target in hdm_i:
+            # 1. FULL SECTOR PURGE: Scan every single source and KILL any link to HDMI
+            for source in out_p:
                 try:
-                    # Find what is sending audio to this HDMI port and KILL IT
-                    current = subprocess.check_output(['pw-link', '-l', target], stderr=subprocess.DEVNULL).decode().splitlines()
+                    # See where this specific source is sending its audio
+                    current = subprocess.check_output(['pw-link', '-l', source], stderr=subprocess.DEVNULL).decode().splitlines()
                     for line in current:
-                        if '|<-' in line:
-                            source = line.split('|<-')[1].strip()
-                            subprocess.run(['pw-link', '-d', source, target])
+                        if '|->' in line:
+                            target = line.split('|->')[1].strip()
+                            if 'hdmi' in target.lower():
+                                # KILL the link to room speakers
+                                subprocess.run(['pw-link', '-d', source, target])
                 except: pass
 
             # 2. MOVIE CLEANUP: Unlink MPV from its old targets
