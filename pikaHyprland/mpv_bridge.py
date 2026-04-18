@@ -62,18 +62,28 @@ class StreamHandler(http.server.SimpleHTTPRequestHandler):
             
             # Identify listener ports
             chrome_in = [p for p in in_ports if any(x in p.lower() for x in ['chrome', 'chromium', 'brave', 'firefox'])]
+            
+            # --- SMART HEADSET/SPEAKER DETECTION ---
+            # 1. Try Bluetooth/Headset first
             headset_in = [p for p in in_ports if any(x in p.lower() for x in ['boult', 'airbass', 'bluez'])]
+            
+            # 2. Fallback to default system speakers if no headset is found
+            if not headset_in:
+                print("⚠️ Headset not found, falling back to system speakers...", flush=True)
+                # Look for the default playback device (usually contains 'playback' or 'hdmi' or 'analog')
+                headset_in = [p for p in in_ports if 'playback' in p.lower() and not any(x in p.lower() for x in ['chrome', 'chromium', 'brave', 'firefox'])]
             
             # --- THE CLEAN MIX ---
             
             # 1. UNLINK EVERYTHING FIRST (Fresh start for MPV)
             for m in mpv_out:
-                # Get existing links for this port
-                current_links = subprocess.check_output(['pw-link', '-l', m]).decode().splitlines()
-                for line in current_links:
-                    if '|->' in line:
-                        target = line.split('|->')[1].strip()
-                        subprocess.run(['pw-link', '-d', m, target])
+                try:
+                    current_links = subprocess.check_output(['pw-link', '-l', m], stderr=subprocess.DEVNULL).decode().splitlines()
+                    for line in current_links:
+                        if '|->' in line:
+                            target = line.split('|->')[1].strip()
+                            subprocess.run(['pw-link', '-d', m, target])
+                except: pass
 
             # 2. LINK ONLY TO DESIRED TARGETS
             
@@ -88,13 +98,13 @@ class StreamHandler(http.server.SimpleHTTPRequestHandler):
                 for c in chrome_in:
                     subprocess.run(['pw-link', w, c])
             
-            # MPV -> Headset (You hear video)
+            # MPV -> Headset or Speakers (You hear video)
             for m in mpv_out:
                 for h in headset_in:
                     subprocess.run(['pw-link', m, h])
                     links += 1
             
-            # Chrome -> Headset (You hear her)
+            # Chrome -> Headset or Speakers (You hear her)
             for c_o in chrome_out:
                 for h in headset_in:
                     subprocess.run(['pw-link', c_o, h])
@@ -107,7 +117,6 @@ class StreamHandler(http.server.SimpleHTTPRequestHandler):
 
     def launch_mpv_logic(self):
         file = subprocess.check_output(['zenity', '--file-selection']).decode().strip()
-        # Launch with specific title for better unlinking
         subprocess.Popen(['mpv', '--title=MeetShare_MPV', '--ao=pipewire', file])
         time.sleep(2.0)
         self.link_audio_ports()
