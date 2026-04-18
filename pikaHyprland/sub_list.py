@@ -5,6 +5,13 @@ import subprocess
 from subliminal import list_subtitles, scan_video, save_subtitles, download_subtitles
 from babelfish import Language
 
+def get_label(sub):
+    """Safely get a label for the subtitle choice"""
+    for attr in ['release_info', 'filename', 'title']:
+        val = getattr(sub, attr, None)
+        if val: return str(val)
+    return str(sub)
+
 def main():
     if len(sys.argv) < 2: return
     video_path = sys.argv[1]
@@ -22,13 +29,12 @@ def main():
             return
 
         # 2. Format for Zenity List
-        # Columns: Index | Provider | Release Name
-        zenity_args = ['zenity', '--list', '--title=Pick a Subtitle', '--column=ID', '--column=Provider', '--column=Release Name', '--width=800', '--height=500']
+        zenity_args = ['zenity', '--list', '--title=Pick a Subtitle', '--column=ID', '--column=Provider', '--column=Release Version', '--width=800', '--height=500']
         
         for i, sub in enumerate(found_subs):
             zenity_args.append(str(i))
-            zenity_args.append(sub.provider_name)
-            zenity_args.append(sub.release_info or "Unknown Release")
+            zenity_args.append(getattr(sub, 'provider_name', 'Unknown'))
+            zenity_args.append(get_label(sub))
             
         res = subprocess.run(zenity_args, capture_output=True, text=True)
         
@@ -36,7 +42,7 @@ def main():
             choice_index = int(res.stdout.strip())
             chosen_sub = found_subs[choice_index]
             
-            subprocess.run(['notify-send', '📥 Downloading...', chosen_sub.release_info])
+            subprocess.run(['notify-send', '📥 Downloading...', get_label(chosen_sub)])
             download_subtitles([chosen_sub])
             save_subtitles(video, [chosen_sub])
             subprocess.run(['notify-send', '✅ Success', 'Subtitles saved!'])
