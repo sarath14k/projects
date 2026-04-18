@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            width: 250px;
+            padding: 20px;
+            background: #0a0a0c;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+        }
+        .btn {
+            background: #00f2ff;
+            color: black;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn:hover {
+            filter: brightness(1.2);
+            transform: scale(1.02);
+        }
+        p { font-size: 0.8rem; opacity: 0.6; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <h3 style="margin-top: 0;">MeetShare</h3>
+    <button class="btn" id="open-player">Open Player Tab</button>
+    <p>Launch the player to drag & drop videos for Google Meet sharing.</p>
+    <script src="popup.js"></script>
+</body>
+</html>

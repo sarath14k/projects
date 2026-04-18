@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "MeetShare MPV Bridge",
+  "version": "1.0",
+  "description": "Premium media bridge for Google Meet with drag-and-drop and audio support.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "permissions": ["tabs"],
+  "host_permissions": [
+    "http://localhost:*",
+    "http://127.0.0.1:*"
+  ],
+  "icons": {
+    "128": "icon.png"
+  }
+}

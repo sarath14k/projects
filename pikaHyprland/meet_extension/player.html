@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeetShare Player</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050505;
+            --accent: #00f2ff;
+            --accent-bg: rgba(0, 242, 255, 0.1);
+            --surface: rgba(255, 255, 255, 0.03);
+            --text: #ffffff;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        #drop-zone {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: all 0.3s ease;
+            background: radial-gradient(circle at center, #111 0%, #050505 100%);
+        }
+
+        #drop-zone.dragover {
+            background: var(--accent-bg);
+            border: 4px dashed var(--accent);
+        }
+
+        .icon-box {
+            width: 120px;
+            height: 120px;
+            background: var(--surface);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-size: 3rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        h1 {
+            font-weight: 600;
+            margin: 0;
+            font-size: 2.5rem;
+            letter-spacing: -1px;
+        }
+
+        p {
+            opacity: 0.5;
+            margin-top: 10px;
+        }
+
+        #player-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 20;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .overlay {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            border-radius: 100px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 30;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #player-container:hover .overlay {
+            opacity: 1;
+        }
+
+        .status-badge {
+            background: var(--accent);
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .btn-close {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .btn-close:hover {
+            background: #ff4d4d;
+        }
+
+        /* Ambient Glow */
+        .glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: var(--accent);
+            filter: blur(150px);
+            opacity: 0.1;
+            border-radius: 50%;
+            z-index: 1;
+        }
+        .btn-main {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 16px;
+            font-size: 1.2rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px var(--accent-glow);
+        }
+
+        .btn-main:hover {
+            transform: scale(1.05) translateY(-5px);
+            filter: brightness(1.1);
+        }
+
+        .btn-pro {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .btn-pro:hover {
+            background: var(--accent);
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="glow" style="top: -100px; left: -100px;"></div>
+    <div class="glow" style="bottom: -100px; right: -100px;"></div>
+
+    <div id="drop-zone">
+        <div class="icon-box">🚀</div>
+        <h1>MeetShare Pro</h1>
+        <p>Ready to share your high-quality MPV window?</p>
+        
+        <button class="btn-main" onclick="launchInMPV()" style="margin-top: 30px;">
+            Open Video in MPV
+        </button>
+
+        <div style="margin-top: 40px; padding: 20px; background: rgba(0, 242, 255, 0.1); border-radius: 12px; font-size: 0.85rem; max-width: 450px; text-align: left; border: 1px solid var(--accent);">
+            <strong>How it works:</strong>
+            <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                <li>This opens the <strong>Actual MPV App</strong> window.</li>
+                <li>Audio is <strong>Auto-Synced</strong> to Google Meet.</li>
+                <li>Simply share the "MPV" window in your meeting!</li>
+            </ul>
+        </div>
+        
+        <div id="service-status" style="font-size: 0.7rem; margin-top: 20px; color: #aaa;">Checking Service...</div>
+    </div>
+
+    <div id="player-container">
+        <video id="video-player" controls autoplay></video>
+        <div class="overlay">
+            <div class="status-badge">Live Meet Share</div>
+            <span id="file-name" style="font-size: 0.9rem; opacity: 0.8;"></span>
+            <button class="btn-close" onclick="resetPlayer()">✕</button>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const playerContainer = document.getElementById('player-container');
+        const videoPlayer = document.getElementById('video-player');
+        const fileNameLabel = document.getElementById('file-name');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                // Now defaults to the real MPV experience
+                launchInMPV();
+            }
+        });
+
+        function playFile(file) {
+            const url = URL.createObjectURL(file);
+            videoPlayer.src = url;
+            fileNameLabel.textContent = file.name;
+            dropZone.style.display = 'none';
+            playerContainer.style.display = 'block';
+            
+            videoPlayer.onerror = function() {
+                if (confirm("This format (like MKV/HEVC) isn't supported natively by the browser. Would you like to use the MPV Bridge to stream it instead?")) {
+                    pickFile();
+                }
+            };
+            
+            videoPlayer.play().catch(e => {
+                console.log("Autoplay blocked or format error");
+            });
+        }
+
+        async function launchInMPV() {
+            try {
+                const res = await fetch('http://127.0.0.1:9999/api/launch_mpv');
+                if (res.ok) {
+                    const data = await res.json();
+                    const status = document.getElementById('service-status');
+                    status.innerHTML = `🚀 <strong style="color:var(--accent)">Started: ${data.file}</strong><br>Now share the MPV window in Google Meet! Audio is synced.`;
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Launch failed: " + err.message + "\nCheck if the terminal shows any requests!");
+            }
+        }
+
+        async function pickFile() {
+            // Deprecated browser-player mode, but kept for fallback
+            try {
+                const response = await fetch('http://127.0.0.1:9999/api/pick_file');
+                if (response.ok) {
+                    const data = await response.json();
+                    videoPlayer.src = "http://127.0.0.1:9999/video?t=" + Date.now();
+                    fileNameLabel.textContent = data.file + " (Browser Mode)";
+                    dropZone.style.display = 'none';
+                    playerContainer.style.display = 'block';
+                    videoPlayer.play();
+                }
+            } catch (err) {
+                alert("Bridge service is not responding.");
+            }
+        }
+
+        // Heartbeat to check if service is running
+        setInterval(async () => {
+            try {
+                // Check if the server is alive at all
+                const res = await fetch('http://127.0.0.1:9999/'); 
+                if (res.ok || res.status === 404) {
+                    document.getElementById('service-status').innerHTML = "● <strong style='color:#4dff88'>Service Connected</strong>";
+                    document.getElementById('service-status').style.color = "#4dff88";
+                }
+            } catch (e) {
+                document.getElementById('service-status').innerHTML = "○ Service Offline (Waiting for Python Bridge...)";
+                document.getElementById('service-status').style.color = "#ff4d4d";
+            }
+        }, 2000);
+
+        function resetPlayer() {
+            videoPlayer.pause();
+            videoPlayer.src = "";
+            playerContainer.style.display = 'none';
+            dropZone.style.display = 'flex';
+        }
+
+        async function linkAudio() {
+            const btn = document.getElementById('link-btn');
+            const status = document.getElementById('status-msg');
+            
+            btn.textContent = "Connecting...";
+            status.style.display = 'block';
+            status.textContent = "Searching for MPV and Browser ports...";
+            
+            try {
+                const response = await fetch('http://127.0.0.1:9999/api/link_audio');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    btn.textContent = "Linked Successfully!";
+                    btn.style.borderColor = "#4dff88";
+                    btn.style.color = "#4dff88";
+                    status.textContent = `Success! Created ${data.links} audio links between MPV and Meet.`;
+                } else {
+                    throw new Error(data.error || "Failed to link");
+                }
+            } catch (err) {
+                btn.textContent = "Link Failed";
+                status.textContent = "Error: " + err.message + ". Make sure the Python Bridge is running and MPV is playing.";
+                status.style.color = "#ff4d4d";
+            }
+            
+            setTimeout(() => {
+                btn.textContent = "Sync MPV Audio to Meet";
+                btn.style.borderColor = "";
+                btn.style.color = "";
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
