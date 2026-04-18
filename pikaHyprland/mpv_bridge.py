@@ -58,10 +58,10 @@ class StreamHandler(http.server.SimpleHTTPRequestHandler):
             # Identify source ports
             mpv_out = [p for p in out_ports if 'mpv' in p.lower()]
             webcam_out = [p for p in out_ports if 'webcam' in p.lower() or 'c270' in p.lower()]
-            chrome_out = [p for p in out_ports if 'chrome' in p.lower()]
+            chrome_out = [p for p in out_ports if any(x in p.lower() for x in ['chrome', 'chromium', 'brave', 'firefox'])]
             
             # Identify listener ports
-            chrome_in = [p for p in in_ports if 'chrome' in p.lower()]
+            chrome_in = [p for p in in_ports if any(x in p.lower() for x in ['chrome', 'chromium', 'brave', 'firefox'])]
             headset_in = [p for p in in_ports if any(x in p.lower() for x in ['boult', 'airbass', 'bluez'])]
             
             # --- THE CLEAN MIX ---
