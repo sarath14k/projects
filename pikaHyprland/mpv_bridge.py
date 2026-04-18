@@ -59,22 +59,35 @@ class StreamHandler(http.server.SimpleHTTPRequestHandler):
         elif self.path == '/api/logs':
             self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
             self.wfile.write(json.dumps({"logs": logs}).encode())
+        elif self.path.startswith('/api/vol_up'):
+            self.change_volume(5)
+        elif self.path.startswith('/api/vol_down'):
+            self.change_volume(-5)
         elif self.path.startswith('/api/set_volume'):
-            self.handle_volume()
+            vol = self.path.split('=')[-1]
+            self.set_volume_raw(vol)
         else:
             self.send_response(404); self.end_headers()
 
-    def handle_volume(self):
+    def change_volume(self, delta):
         try:
-            vol = self.path.split('=')[-1]
-            add_log(f"Volume set to {vol}%")
+            cmd = f'{{"command": ["add", "volume", {delta}]}}\n'
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+                s.connect(IPC_SOCKET)
+                s.sendall(cmd.encode())
+            add_log(f"Volume {'up' if delta > 0 else 'down'} by {abs(delta)}%")
+            self.send_response(200); self.end_headers()
+        except: self.send_response(500); self.end_headers()
+
+    def set_volume_raw(self, vol):
+        try:
             cmd = f'{{"command": ["set_property", "volume", {vol}]}}\n'
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
                 s.connect(IPC_SOCKET)
                 s.sendall(cmd.encode())
+            add_log(f"Volume set to {vol}%")
             self.send_response(200); self.end_headers()
-        except:
-            self.send_response(500); self.end_headers()
+        except: self.send_response(500); self.end_headers()
 
     def handle_api(self, logic_func):
         try:
@@ -103,26 +116,25 @@ class StreamHandler(http.server.SimpleHTTPRequestHandler):
 
             for m in mpv_out:
                 for c in chrome_in: 
-                    if subprocess.run(['pw-link', m, c]).returncode == 0: links += 1; add_log(f"Linked: Video -> Meeting")
+                    if subprocess.run(['pw-link', m, c]).returncode == 0: links += 1
             
             if mic_active:
                 for w in webcam_out:
                     for c in chrome_in: 
-                        if subprocess.run(['pw-link', w, c]).returncode == 0: links += 1; add_log(f"Linked: Mic -> Meeting")
+                        if subprocess.run(['pw-link', w, c]).returncode == 0: links += 1
             
             for m in mpv_out:
                 for h in headset_in: 
-                    if subprocess.run(['pw-link', m, h]).returncode == 0: links += 1; add_log(f"Linked: Video -> Headset")
+                    if subprocess.run(['pw-link', m, h]).returncode == 0: links += 1
             for c_o in chrome_out:
                 for h in headset_in: 
-                    if subprocess.run(['pw-link', c_o, h]).returncode == 0: links += 1; add_log(f"Linked: Meeting -> Headset")
+                    if subprocess.run(['pw-link', c_o, h]).returncode == 0: links += 1
                     
         except Exception as e:
             add_log(f"Error: {str(e)}")
             subprocess.run(['notify-send', 'MeetShare Error', str(e)])
             
         status_msg = "✅ Matrix Synced" if mic_active else "🤫 Mic Muted"
-        add_log(f"Sync complete. Total links: {links}")
         subprocess.run(['notify-send', '-i', 'audio-speakers', 'MeetShare Pro', status_msg])
             
         return {"status": "success", "links": links, "mic_active": mic_active}
@@ -135,7 +147,7 @@ class StreamHandler(http.server.SimpleHTTPRequestHandler):
         
         def monitor():
             proc.wait()
-            add_log("MPV Closed. Triggering cleanup...")
+            add_log("MPV Closed. Cleaning up...")
             subprocess.run(['notify-send', 'MeetShare Pro', '🎬 Video Closed. Cleaning up...'])
             self.link_audio_ports()
             
