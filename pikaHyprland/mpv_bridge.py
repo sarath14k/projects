@@ -97,8 +97,8 @@ class MeetEngine:
             in_p = subprocess.check_output(['pw-link', '-i']).decode().splitlines()
             mpv_o = [p for p in out_p if 'mpv' in p.lower()]
             web_o = [p for p in out_p if any(x in p.lower() for x in ['webcam', 'c270'])]
-            brw_o = [p for p in out_p if any(x in p.lower() for x in ['chrome', 'firefox', 'brave'])]
-            brw_i = [p for p in in_p if any(x in p.lower() for x in ['chrome', 'firefox', 'brave'])]
+            brw_o = [p for p in out_p if any(x in p.lower() for x in ['chrome', 'firefox', 'brave', 'helium'])]
+            brw_i = [p for p in in_p if any(x in p.lower() for x in ['chrome', 'firefox', 'brave', 'helium'])]
             hds_i = [p for p in in_p if any(x in p.lower() for x in ['boult', 'bluez', 'airbass'])]
             
             # 1. FULL SECTOR PURGE: Scan every single source and KILL any link to HDMI
