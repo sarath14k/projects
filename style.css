@@ -1,0 +1,74 @@
+.sidebar {
+    background-color: @window_bg_color;
+    border-right: 1px solid @borders;
+}
+
+.title-1 {
+    font-weight: 800;
+    font-size: 24pt;
+    margin-bottom: 5px;
+    color: @accent_color;
+}
+
+.title-2 {
+    font-weight: 600;
+    font-size: 18pt;
+    margin-bottom: 20px;
+    color: @success_color;
+}
+
+.rating-badge {
+    background: linear-gradient(45deg, #00f2fe, #4facfe);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.plot-container {
+    background-color: #1e1e1e;
+    border-radius: 12px;
+    padding: 10px;
+    margin: 10px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+
+.suggested-action {
+    background: @accent_bg_color;
+    color: @accent_fg_color;
+    font-weight: bold;
+}
+
+list {
+    background: transparent;
+}
+
+listrow {
+    padding: 10px;
+    border-radius: 8px;
+    margin: 2px 5px;
+    transition: all 0.2s ease;
+}
+
+listrow:selected {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+}
+
+listrow:hover:not(:selected) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.dim-label {
+    opacity: 0.6;
+    font-size: 0.9rem;
+    font-family: 'Monospace';
+}
+
+.accent-label {
+    color: @accent_color;
+    font-weight: bold;
+    font-size: 1.1rem;
+}

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=VocalPulse
+Comment=Advanced Vocal Analysis and Rating Tool
+Exec=/home/sarath/.local/bin/vocalpulse
+Icon=vocalpulse
+Terminal=false
+Type=Application
+Categories=AudioVideo;Audio;
+Keywords=vocal;pitch;analysis;librosa;
+StartupNotify=true
