@@ -134,22 +134,26 @@ ShellRoot {
                     onDoubleClicked: WallpaperManager.setNextWallpaper()
                 }
                 
-                layer.enabled: (Settings.settings.focusModeBlur && root.hasWindows) || 
+                layer.enabled: root.locked ||
+                              (Settings.settings.focusModeBlur && root.hasWindows) || 
                               (Settings.settings.uiEmphasis && root.panelsOpen) ||
                               Settings.settings.dynamicColorShift
                 
                 layer.effect: MultiEffect {
-                    // Blur logic: strongest when panels are open, medium when windows are open
+                    // Blur logic: maximum when locked, strong when panels are open, medium when windows are open
                     blurEnabled: true
-                    blur: (Settings.settings.uiEmphasis && root.panelsOpen) ? 0.8 : 
-                          (Settings.settings.focusModeBlur && root.hasWindows) ? 0.4 : 0.0
+                    blur: root.locked ? 1.0 :
+                          ((Settings.settings.uiEmphasis && root.panelsOpen) ? 0.8 : 
+                          ((Settings.settings.focusModeBlur && root.hasWindows) ? 0.4 : 0.0))
                     
-                    // Saturation logic: softer at night
-                    saturation: (Settings.settings.dynamicColorShift && (root.currentHour >= 20 || root.currentHour <= 6)) ? -0.4 : 0.0
+                    // Saturation logic: fully grayed when locked for maximum focus, softer at night
+                    saturation: root.locked ? -1.0 :
+                                ((Settings.settings.dynamicColorShift && (root.currentHour >= 20 || root.currentHour <= 6)) ? -0.4 : 0.0)
                     
-                    // Colorization: subtle warmth at night
-                    colorization: (Settings.settings.dynamicColorShift && (root.currentHour >= 20 || root.currentHour <= 6)) ? 0.15 : 0.0
-                    colorizationColor: "#ffaa00"
+                    // Colorization: subtle primary accent warmth when locked, orange glow at night
+                    colorization: root.locked ? 0.25 :
+                                  ((Settings.settings.dynamicColorShift && (root.currentHour >= 20 || root.currentHour <= 6)) ? 0.15 : 0.0)
+                    colorizationColor: root.locked ? Theme.accentPrimary : "#ffaa00"
                 }
                 
                 // Night mode & UI Emphasis dimming

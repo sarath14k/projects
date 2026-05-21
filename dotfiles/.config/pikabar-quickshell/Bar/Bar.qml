@@ -44,6 +44,7 @@ Scope {
                     anchors.left: true
                     anchors.right: true
                     WlrLayershell.namespace: "pikabar"
+                    WlrLayershell.exclusionMode: panel.isShrunk ? ExclusionMode.Ignore : ExclusionMode.Exclusive
                     visible: Settings.settings.barMonitors.includes(modelData.name) || (Settings.settings.barMonitors.length === 0)
 
                     Behavior on implicitHeight {
@@ -104,7 +105,13 @@ Scope {
                         anchors.horizontalCenter: parent.horizontalCenter
                         
                         border.width: 1
-                        border.color: Qt.rgba(255, 255, 255, 0.08)
+                        border.color: panel.isShrunk 
+                            ? Qt.rgba(0.05, 0.72, 0.83, 0.35) 
+                            : Qt.rgba(255, 255, 255, 0.08)
+
+                        Behavior on border.color {
+                            ColorAnimation { duration: 350 }
+                        }
 
                         layer.enabled: true
                         layer.effect: MultiEffect {
