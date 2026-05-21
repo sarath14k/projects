@@ -70,6 +70,7 @@ Row {
                 id: cpuUsageText
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall * Theme.scale(Screen)
+                font.weight: Font.Bold
                 color: Theme.textPrimary
                 text: Sysinfo.cpuUsageStr
                 anchors.verticalCenter: parent.verticalCenter
@@ -111,6 +112,7 @@ Row {
         Text {
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall * Theme.scale(Screen)
+            font.weight: Font.Bold
             color: Theme.textPrimary
             text: showGpuStats ? Sysinfo.gpuTempStr : Sysinfo.cpuTempStr
             anchors.verticalCenter: parent.verticalCenter
@@ -163,6 +165,7 @@ Row {
             Text {
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall * Theme.scale(Screen)
+                font.weight: Font.Bold
                 color: Theme.textPrimary
                 text: showGpuStats ? Sysinfo.gpuMemUsageStr : Sysinfo.memoryUsageStr
                 anchors.verticalCenter: parent.verticalCenter
@@ -252,6 +255,7 @@ Row {
                 Text {
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall * Theme.scale(Screen)
+                    font.weight: Font.Bold
                     color: Theme.textPrimary
                     text: Sysinfo.roomTempStr
                     anchors.verticalCenter: parent.verticalCenter
@@ -275,6 +279,7 @@ Row {
                 Text {
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall * Theme.scale(Screen)
+                    font.weight: Font.Bold
                     color: Theme.textPrimary
                     text: Sysinfo.weatherTempStr
                     anchors.verticalCenter: parent.verticalCenter
@@ -328,6 +333,7 @@ Row {
             Text {
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall * Theme.scale(Screen)
+                font.weight: Font.Bold
                 color: Theme.textPrimary
                 text: "Disk"
                 anchors.verticalCenter: parent.verticalCenter

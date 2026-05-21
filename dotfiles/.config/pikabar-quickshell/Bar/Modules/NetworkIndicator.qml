@@ -50,13 +50,14 @@ Item {
                 font.family: "Material Symbols Outlined"
                 font.pixelSize: Theme.fontSizeBody * Theme.scale(Screen)
                 text: "download"
-                color: Theme.accentPrimary
+                color: "#00E676" // Vibrant neon green
                 verticalAlignment: Text.AlignVCenter
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall * Theme.scale(Screen)
+                font.weight: Font.Bold
                 color: Theme.textPrimary
                 text: NetworkSpeed.downloadSpeedStr
                 verticalAlignment: Text.AlignVCenter
@@ -70,13 +71,14 @@ Item {
                 font.family: "Material Symbols Outlined"
                 font.pixelSize: Theme.fontSizeBody * Theme.scale(Screen)
                 text: "upload"
-                color: Theme.accentPrimary
+                color: "#FF9100" // Vibrant neon orange
                 verticalAlignment: Text.AlignVCenter
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall * Theme.scale(Screen)
+                font.weight: Font.Bold
                 color: Theme.textPrimary
                 text: NetworkSpeed.uploadSpeedStr
                 verticalAlignment: Text.AlignVCenter

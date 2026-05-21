@@ -123,7 +123,7 @@ Singleton {
     property color overlay: applyOpacity(themeData.overlay, "66")
 
     // Font Properties
-    property string fontFamily: "Roboto"         // Family for all text
+    property string fontFamily: "Fira Sans"         // Family for all text
     
     // Font size multiplier - adjust this in Settings.json to scale all fonts
     property real fontSizeMultiplier: Settings.settings.fontSizeMultiplier || 1.0
