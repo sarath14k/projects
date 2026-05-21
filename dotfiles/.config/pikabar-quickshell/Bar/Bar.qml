@@ -44,7 +44,7 @@ Scope {
                     anchors.left: true
                     anchors.right: true
                     WlrLayershell.namespace: "pikabar"
-                    WlrLayershell.exclusionMode: panel.isShrunk ? ExclusionMode.Ignore : ExclusionMode.Exclusive
+                    WlrLayershell.exclusionMode: ExclusionMode.Exclusive
                     visible: Settings.settings.barMonitors.includes(modelData.name) || (Settings.settings.barMonitors.length === 0)
 
                     Behavior on implicitHeight {
@@ -144,63 +144,66 @@ Scope {
                         }
                     }
 
+                    Item {
+                        id: barContent
+                        anchors.fill: barBackground
 
-                    Row {
-                        id: leftWidgetsRow
+                        Row {
+                            id: leftWidgetsRow
 
-                        anchors.verticalCenter: barBackground.verticalCenter
-                        anchors.left: barBackground.left
-                        anchors.leftMargin: 18 * Theme.scale(panel.screen)
-                        spacing: 12 * Theme.scale(panel.screen)
-                        
-                        scale: panel.isShrunk ? 0.92 : 1.0
-                        transformOrigin: Item.Left
-
-                        Behavior on scale {
-                            NumberAnimation { duration: 350; easing.type: Easing.OutCubic }
-                        }
-                        Behavior on spacing {
-                            NumberAnimation { duration: 350; easing.type: Easing.OutCubic }
-                        }
-
-                        SystemInfo {
                             anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            anchors.leftMargin: 18 * Theme.scale(panel.screen)
+                            spacing: 12 * Theme.scale(panel.screen)
+                            
+                            scale: panel.isShrunk ? 0.92 : 1.0
+                            transformOrigin: Item.Left
+
+                            Behavior on scale {
+                                NumberAnimation { duration: 350; easing.type: Easing.OutCubic }
+                            }
+                            Behavior on spacing {
+                                NumberAnimation { duration: 350; easing.type: Easing.OutCubic }
+                            }
+
+                            SystemInfo {
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+
+                            Taskbar {
+                                screen: modelData
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
                         }
 
-
-                        Taskbar {
+                        ActiveWindow {
                             screen: modelData
+                        }
+
+                        Workspace {
+                            id: workspace
+
+                            screen: modelData
+                            anchors.horizontalCenter: parent.horizontalCenter
                             anchors.verticalCenter: parent.verticalCenter
+
+                            scale: panel.isShrunk ? 0.92 : 1.0
+                            transformOrigin: Item.Center
+
+                            Behavior on scale {
+                                NumberAnimation { duration: 350; easing.type: Easing.OutCubic }
+                            }
                         }
 
-                    }
+                        Row {
+                            id: rightWidgetsRow
 
-                    ActiveWindow {
-                        screen: modelData
-                    }
-
-                    Workspace {
-                        id: workspace
-
-                        screen: modelData
-                        anchors.horizontalCenter: barBackground.horizontalCenter
-                        anchors.verticalCenter: barBackground.verticalCenter
-
-                        scale: panel.isShrunk ? 0.92 : 1.0
-                        transformOrigin: Item.Center
-
-                        Behavior on scale {
-                            NumberAnimation { duration: 350; easing.type: Easing.OutCubic }
-                        }
-                    }
-
-                    Row {
-                        id: rightWidgetsRow
-
-                        anchors.verticalCenter: barBackground.verticalCenter
-                        anchors.right: barBackground.right
-                        anchors.rightMargin: 18 * Theme.scale(panel.screen)
-                        spacing: 10 * Theme.scale(panel.screen)
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.right: parent.right
+                            anchors.rightMargin: 18 * Theme.scale(panel.screen)
+                            spacing: 10 * Theme.scale(panel.screen)
                         
                         scale: panel.isShrunk ? 0.92 : 1.0
                         transformOrigin: Item.Right
@@ -379,6 +382,8 @@ Scope {
                         }
 
                     }
+
+                    } // closes barContent
 
                 }
 
