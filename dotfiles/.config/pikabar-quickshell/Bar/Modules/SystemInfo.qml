@@ -335,7 +335,7 @@ Row {
                 font.pixelSize: Theme.fontSizeSmall * Theme.scale(Screen)
                 font.weight: Font.Bold
                 color: Theme.textPrimary
-                text: "Disk"
+                text: "Disk " + Sysinfo.diskUsageStr
                 anchors.verticalCenter: parent.verticalCenter
                 verticalAlignment: Text.AlignVCenter
             }

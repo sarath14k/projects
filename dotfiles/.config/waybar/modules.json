@@ -234,14 +234,14 @@
   },
   // CPU
   "cpu": {
-    "format": "/ C {usage}% ",
+    "format": " {usage}% ",
     "on-click": "~/.config/ml4w/settings/system-monitor.sh",
     "on-scroll-up": "true",
     "on-scroll-down": "true"
   },
   // Memory
   "memory": {
-    "format": "/ M {used:0.1f}GB/{total:0.1f}GB ",
+    "format": " {used:0.1f}GB/{total:0.1f}GB ",
     "on-click": "~/.config/ml4w/settings/system-monitor.sh",
     "on-scroll-up": "true",
     "on-scroll-down": "true"
@@ -249,14 +249,22 @@
   // Harddisc space used
   "disk": {
     "interval": 30,
-    "format": "D {percentage_used}% ",
+    "format": " {percentage_used}% ",
     "path": "/",
     "on-click": "~/.config/ml4w/settings/system-monitor.sh",
     "on-scroll-up": "true",
     "on-scroll-down": "true"
   },
+  "disk#data": {
+    "interval": 30,
+    "format": " {percentage_used}% ",
+    "path": "/home/data",
+    "on-click": "~/.config/ml4w/settings/system-monitor.sh",
+    "on-scroll-up": "true",
+    "on-scroll-down": "true"
+  },
   "hyprland/language": {
-    "format": "/ K {short}",
+    "format": " {short}",
     "on-scroll-up": "true",
     "on-scroll-down": "true"
   },
@@ -271,6 +279,7 @@
     "modules": [
       "custom/system",
       "disk",
+      "disk#data",
       "cpu",
       "temperature#cpu",
       "temperature#gpu",
@@ -360,6 +369,9 @@
     "format-icons": {
       "default": "",
       "performance": "",
+      "Performance": "",
+      "economy": "",
+      "Economy": "",
       "balanced": "",
       "power-saver": ""
     },
@@ -434,14 +446,14 @@
   "temperature#cpu": {
     "hwmon-path": "/sys/class/hwmon/hwmon3/temp1_input",
     "critical-threshold": 80,
-    "format": "/ T {temperatureC}°C ",
+    "format": " {temperatureC}°C ",
     "on-click": "~/.config/ml4w/settings/system-monitor.sh"
   },
   // Temperature GPU
   "temperature#gpu": {
     "hwmon-path": "/sys/class/hwmon/hwmon2/temp1_input",
     "critical-threshold": 80,
-    "format": "/ G {temperatureC}°C ",
+    "format": " {temperatureC}°C ",
     "on-click": "~/.config/ml4w/settings/system-monitor.sh"
   }
 }

@@ -1,0 +1,39 @@
+================================================================================
+                    PIKA HYPRLAND ONE-COMMAND RESTORE INSTRUCTIONS
+================================================================================
+
+Step 1: Mount your BTRFS SSD
+----------------------------
+Open a terminal and run the following command to mount your BTRFS SSD to '/mnt/data'
+(as you planned, this will be your persistent data mount location):
+
+  sudo mkdir -p /mnt/data
+  sudo mount /dev/sda2 /mnt/data
+
+Step 2: Run the One-Command Restoration Script
+----------------------------------------------
+Navigate to your mounted SSD and execute the highly automated restoration script.
+This will restore all your settings, terminal utilities, user services, and wallpapers:
+
+  python3 /mnt/data/restore_system.py
+
+Step 3: Choose Package Installation (Highly Recommended!)
+-----------------------------------------
+When prompted by the script:
+  "Do you want to automatically reinstall all APT and Flatpak packages now? [Y/n]:"
+
+Simply press ENTER or type 'y' to start.
+The script will automatically refresh your system repositories, reinstall all your
+custom packages, and pull down your Flatpak applications in one seamless run!
+
+Step 4: Reboot and Enjoy!
+-------------------------
+Once the script completes successfully, reboot your machine to apply all systemd
+timers, autostarts, and custom terminal binaries:
+
+  reboot
+
+--------------------------------------------------------------------------------
+Your configurations, 4K live video backgrounds, static wallpapers, Web Remote Pro,
+download organizers, and subtitle scripts are all completely safe and ready!
+================================================================================

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Pareto Problem Set Practice & Tracker</title>
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons for modern aesthetic -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom Vanilla Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Background Glowing Blobs -->
+  <div class="glass-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- Sidebar / Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">
+          <i class="fa-solid fa-fire-flame-curved"></i>
+        </div>
+        <div class="brand-text">
+          <h1>PARETO</h1>
+          <span>LeetCode Lounge</span>
+        </div>
+        <button class="icon-btn" id="btn-collapse-sidebar" title="Collapse Sidebar" style="margin-left: auto;">
+          <i class="fa-solid fa-angles-left"></i>
+        </button>
+      </div>
+      
+      <nav class="nav-menu">
+        <button class="nav-btn active" data-target="dashboard-view" id="nav-dashboard">
+          <i class="fa-solid fa-chart-line"></i> Dashboard
+        </button>
+        <button class="nav-btn" data-target="roadmap-view" id="nav-roadmap">
+          <i class="fa-solid fa-map-location-dot"></i> Pareto Roadmap
+        </button>
+        <button class="nav-btn" data-target="tracker-view" id="nav-tracker">
+          <i class="fa-solid fa-list-check"></i> Tracker Table
+        </button>
+        <button class="nav-btn" data-target="sandbox-view" id="nav-sandbox">
+          <i class="fa-solid fa-laptop-code"></i> Coding Sandbox
+        </button>
+      </nav>
+      
+      <div class="progress-widget">
+        <div class="widget-header">
+          <span>Overall Progress</span>
+          <span id="widget-percent">0%</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="widget-progress-fill" style="width: 0%;"></div>
+        </div>
+        <div class="widget-stats">
+          <span id="widget-solved">0/49 Solved</span>
+          <span id="widget-review-count"><i class="fa-solid fa-clock-rotate-left"></i> 0 Review</span>
+        </div>
+      </div>
+      
+      <div class="sidebar-footer">
+        <button class="footer-action-btn" id="btn-export-data" title="Export Backup Data">
+          <i class="fa-solid fa-download"></i> Export
+        </button>
+        <button class="footer-action-btn" id="btn-import-data" title="Import Backup Data">
+          <i class="fa-solid fa-upload"></i> Import
+        </button>
+        <button class="footer-action-btn" id="btn-reset-all" title="Clear all local data">
+          <i class="fa-solid fa-trash-can"></i> Reset
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Top Header -->
+      <header class="content-header">
+        <div class="header-left" style="display: flex; align-items: center;">
+          <button class="icon-btn" id="btn-toggle-main-sidebar" title="Toggle Sidebar" style="margin-right: 16px; font-size: 18px;">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="header-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" placeholder="Quick search problems (e.g. Two Sum)..." id="header-search-input">
+          </div>
+        </div>
+        
+        <div class="header-actions">
+          <div class="quick-timer" id="header-timer-display" style="display: none;">
+            <i class="fa-solid fa-hourglass-start pulse-icon"></i>
+            <span id="header-timer-clock">00:00</span>
+            <span class="timer-problem-name" id="header-timer-pname">Contains Duplicate</span>
+          </div>
+          
+          <div class="streak-badge">
+            <i class="fa-solid fa-bolt"></i>
+            <span id="streak-count">0</span> Day Streak
+          </div>
+          
+          <div class="user-profile">
+            <span class="avatar">S</span>
+            <span class="username">Developer</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- VIEW: DASHBOARD -->
+      <section id="dashboard-view" class="view-section active">
+        <div class="welcome-banner">
+          <div class="welcome-text">
+            <h2>Welcome Back, coder! ⚡</h2>
+            <p>Ready to conquer LeetCode Mediums? Learn to pass 90% of coding interviews by practicing the 49 critical Pareto problems.</p>
+          </div>
+          <button class="primary-btn animate-btn" id="btn-resume-practice">
+            <i class="fa-solid fa-play"></i> Resume Practice
+          </button>
+        </div>
+
+        <div class="dashboard-stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon blue-glow"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="stat-info">
+              <h3>Completion Rate</h3>
+              <p class="stat-value" id="stats-completion-percent">0%</p>
+              <span class="stat-subtext" id="stats-completion-fraction">0 of 49 solved</span>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon green-glow"><i class="fa-solid fa-trophy"></i></div>
+            <div class="stat-info">
+              <h3>Success Ratio</h3>
+              <p class="stat-value" id="stats-success-ratio">0%</p>
+              <span class="stat-subtext" id="stats-success-count">0 solved successfully</span>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon orange-glow"><i class="fa-solid fa-clock-rotate-left"></i></div>
+            <div class="stat-info">
+              <h3>Review Queue</h3>
+              <p class="stat-value" id="stats-review-queue">0</p>
+              <span class="stat-subtext">Problems flagged for review</span>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon purple-glow"><i class="fa-solid fa-stopwatch"></i></div>
+            <div class="stat-info">
+              <h3>Total Time spent</h3>
+              <p class="stat-value" id="stats-total-time">0m</p>
+              <span class="stat-subtext">Accumulated practice time</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-details-grid">
+          <!-- Left Column: Category Progress -->
+          <div class="details-panel category-panel">
+            <div class="panel-header">
+              <h3>Category Breakthrough</h3>
+              <span class="badge">9 Categories</span>
+            </div>
+            <div class="category-breakdown-list" id="category-progress-list">
+              <!-- Dynamically Populated -->
+            </div>
+          </div>
+          
+          <!-- Right Column: Recent Activity & Backlog -->
+          <div class="details-panel activity-panel">
+            <div class="panel-header">
+              <h3>Next Recommended Problems</h3>
+              <span>Tailored Roadmap</span>
+            </div>
+            <div class="recommended-problems-list" id="recommended-problems-list">
+              <!-- Dynamically Populated -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: ROADMAP (1st Image Template) -->
+      <section id="roadmap-view" class="view-section">
+        <div class="section-title-bar">
+          <div>
+            <h2>THE PARETO PROBLEM SET</h2>
+            <p class="subtitle">Learn to pass 90% of coding interviews and consistently solve LeetCode Mediums</p>
+          </div>
+          <div class="roadmap-summary-badge">
+            <span id="roadmap-count-easy">0/15 Easy</span>
+            <span id="roadmap-count-medium">0/34 Medium</span>
+          </div>
+        </div>
+        
+        <!-- Category Map Grid -->
+        <div class="roadmap-grid-container" id="roadmap-grid-container">
+          <!-- Grid items for categories are populated by Javascript -->
+        </div>
+      </section>
+
+      <!-- VIEW: TRACKER TABLE (2nd Image Template) -->
+      <section id="tracker-view" class="view-section">
+        <!-- Notion-style filter tabs -->
+        <div class="tracker-header-row">
+          <div class="notion-tabs">
+            <button class="notion-tab active" data-source="All"><i class="fa-solid fa-list"></i> All Problems</button>
+            <button class="notion-tab" data-source="LeetCode"><i class="fa-solid fa-code"></i> LeetCode</button>
+            <button class="notion-tab" data-source="AlgoExpert"><i class="fa-solid fa-graduation-cap"></i> AlgoExpert</button>
+          </div>
+          
+          <div class="table-tools">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" placeholder="Filter by name..." id="table-search-input">
+            </div>
+            
+            <select class="custom-select" id="filter-difficulty">
+              <option value="All">All Difficulties</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+            </select>
+            
+            <select class="custom-select" id="filter-status">
+              <option value="All">All Statuses</option>
+              <option value="Completed">Completed</option>
+              <option value="Incomplete">Incomplete</option>
+              <option value="Success">Success</option>
+              <option value="Review">Needs Review</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Table container -->
+        <div class="notion-table-wrapper">
+          <table class="notion-table" id="tracker-table">
+            <thead>
+              <tr>
+                <th style="width: 5%;" data-sort="id"># <i class="fa-solid fa-sort"></i></th>
+                <th style="width: 25%;" data-sort="name">Name <i class="fa-solid fa-sort"></i></th>
+                <th style="width: 10%;" data-sort="source">Source <i class="fa-solid fa-sort"></i></th>
+                <th style="width: 10%;" data-sort="difficulty">Difficulty <i class="fa-solid fa-sort"></i></th>
+                <th style="width: 12%;" data-sort="date">Date Completed <i class="fa-solid fa-sort"></i></th>
+                <th style="width: 8%;">Completed</th>
+                <th style="width: 8%;">Success</th>
+                <th style="width: 8%;">Review</th>
+                <th style="width: 9%;" data-sort="time">Time (mins) <i class="fa-solid fa-sort"></i></th>
+                <th style="width: 9%;" data-sort="rating">Rating (%) <i class="fa-solid fa-sort"></i></th>
+                <th style="width: 16%;">Related Topics</th>
+              </tr>
+            </thead>
+            <tbody id="tracker-table-body">
+              <!-- Dynamically generated rows -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW: CODING SANDBOX -->
+      <section id="sandbox-view" class="view-section">
+        <div class="sandbox-container">
+          
+          <!-- Sidebar: Problem Selector -->
+          <aside class="sandbox-sidebar" id="sandbox-sidebar">
+            <div class="sandbox-sidebar-header">
+              <h3>Problem Directory</h3>
+              <button class="icon-btn" id="btn-toggle-sandbox-sidebar" title="Collapse Sidebar">
+                <i class="fa-solid fa-angles-left"></i>
+              </button>
+            </div>
+            <div class="sandbox-search">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" placeholder="Search problems..." id="sandbox-problem-search">
+            </div>
+            <ul class="sandbox-problem-list" id="sandbox-problem-list">
+              <!-- Dynamically populated problem listing -->
+            </ul>
+          </aside>
+          
+          <!-- Main Coding Workspace -->
+          <div class="sandbox-workspace">
+            
+            <!-- Workspace Split Columns -->
+            <div class="workspace-grid">
+              
+              <!-- Column Left: Description / Solutions / Explanations -->
+              <div class="pane pane-left">
+                <div class="pane-tab-header">
+                  <button class="pane-tab active" data-tab="tab-desc">Description</button>
+                  <button class="pane-tab" data-tab="tab-solution-cpp">C++ Solution</button>
+                  <button class="pane-tab" data-tab="tab-solution-python">Python Solution</button>
+                  <button class="pane-tab" data-tab="tab-explanation">Explanation</button>
+                </div>
+                
+                <div class="pane-tab-content active" id="tab-desc">
+                  <div class="problem-meta-row">
+                    <span class="difficulty-badge" id="sandbox-p-difficulty">Medium</span>
+                    <span class="category-tag" id="sandbox-p-category">Arrays & Hashing</span>
+                    <a href="#" target="_blank" class="leetcode-link" id="sandbox-p-leetcode-link">
+                      LeetCode <i class="fa-solid fa-up-right-from-square"></i>
+                    </a>
+                  </div>
+                  
+                  <h2 class="problem-title" id="sandbox-p-title">Contains Duplicate</h2>
+                  
+                  <div class="markdown-content" id="sandbox-p-desc">
+                    <!-- Markdown content goes here -->
+                  </div>
+                  
+                  <div class="examples-container">
+                    <h4>Examples:</h4>
+                    <div id="sandbox-p-examples">
+                      <!-- Examples loaded dynamically -->
+                    </div>
+                  </div>
+                  
+                  <div class="constraints-container">
+                    <h4>Constraints:</h4>
+                    <ul id="sandbox-p-constraints">
+                      <!-- Constraints loaded dynamically -->
+                    </ul>
+                  </div>
+                </div>
+                
+                <div class="pane-tab-content" id="tab-solution-cpp">
+                  <div class="solution-header">
+                    <h4>C++ Standard Optimized Solution</h4>
+                    <button class="copy-btn" id="btn-copy-cpp"><i class="fa-regular fa-copy"></i> Copy Code</button>
+                  </div>
+                  <pre><code class="language-cpp" id="code-cpp-display"></code></pre>
+                </div>
+                
+                <div class="pane-tab-content" id="tab-solution-python">
+                  <div class="solution-header">
+                    <h4>Python 3 Standard Optimized Solution</h4>
+                    <button class="copy-btn" id="btn-copy-python"><i class="fa-regular fa-copy"></i> Copy Code</button>
+                  </div>
+                  <pre><code class="language-python" id="code-python-display"></code></pre>
+                </div>
+                
+                <div class="pane-tab-content" id="tab-explanation">
+                  <div class="complexity-overview">
+                    <div class="complexity-box">
+                      <span class="label">Time Complexity</span>
+                      <span class="value" id="sandbox-p-time-complexity">O(n)</span>
+                    </div>
+                    <div class="complexity-box">
+                      <span class="label">Space Complexity</span>
+                      <span class="value" id="sandbox-p-space-complexity">O(n)</span>
+                    </div>
+                  </div>
+                  
+                  <div class="explanation-details">
+                    <h4>Detailed Algorithmic Approach:</h4>
+                    <p id="sandbox-p-explanation-text"></p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Column Right: Live Editor & Output Console -->
+              <div class="pane pane-right">
+                
+                <!-- Workspace Controller -->
+                <div class="editor-controller">
+                  <div class="editor-settings">
+                    <select class="custom-select" id="editor-language">
+                      <option value="cpp">C++ (G++ 17)</option>
+                      <option value="python">Python (3.11)</option>
+                    </select>
+                    
+                    <button class="secondary-btn" id="btn-toggle-vim" title="Toggle Vim Keybindings" style="padding: 6px 10px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; height: 32px; border-radius: 6px;">
+                      <i class="fa-solid fa-keyboard"></i> Vim: OFF
+                    </button>
+                    <span id="vim-mode-badge" style="display: none; background-color: var(--primary); color: white; padding: 4px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Normal</span>
+
+                    <button class="icon-btn" id="btn-reset-code" title="Reset starter code">
+                      <i class="fa-solid fa-arrow-rotate-left"></i>
+                    </button>
+                  </div>
+                  
+                  <!-- Pomodoro Practice Timer -->
+                  <div class="practice-timer">
+                    <button class="timer-btn" id="btn-timer-toggle" title="Start/Pause Timer">
+                      <i class="fa-solid fa-play"></i>
+                    </button>
+                    <span class="timer-clock" id="timer-clock-display">00:00</span>
+                    <button class="timer-btn" id="btn-timer-reset" title="Reset Timer">
+                      <i class="fa-solid fa-stop"></i>
+                    </button>
+                  </div>
+                </div>
+                
+                <!-- Text Area Editor -->
+                <div class="editor-workspace">
+                  <div class="editor-line-numbers" id="editor-line-numbers">
+                    <span>1</span>
+                  </div>
+                  <textarea class="editor-textarea" id="editor-textarea" spellcheck="false" autocomplete="off"></textarea>
+                </div>
+                
+                <!-- Output / Console Panel -->
+                <div class="console-panel">
+                  <div class="console-header">
+                    <span><i class="fa-solid fa-terminal"></i> Output Console</span>
+                    <div class="console-actions">
+                      <button class="console-btn" id="btn-clear-console">Clear</button>
+                    </div>
+                  </div>
+                  <div class="console-output" id="console-output-text">
+                    Welcome to Pareto Sandbox! Write your solution above. Click 'Run Code' to execute mock tests.
+                  </div>
+                  <div class="workspace-actions">
+                    <button class="secondary-btn" id="btn-run-code">
+                      <i class="fa-solid fa-gears"></i> Run Code
+                    </button>
+                    <button class="primary-btn animate-btn" id="btn-complete-problem">
+                      <i class="fa-solid fa-circle-check"></i> Complete Problem
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+          
+        </div>
+      </section>
+      
+    </main>
+  </div>
+
+  <!-- MODAL: Complete & Log Practice Session -->
+  <div class="modal" id="modal-complete-session">
+    <div class="modal-content glassmorphism">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-circle-check text-green"></i> Log Problem Session</h3>
+        <button class="modal-close" id="modal-complete-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <h4 id="modal-problem-title">Contains Duplicate</h4>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Time Spent (minutes)</label>
+            <input type="number" id="modal-time-input" min="1" max="999" value="15">
+          </div>
+          
+          <div class="form-group">
+            <label>Rating (Difficulty of implementation %)</label>
+            <div class="rating-slider-container">
+              <input type="range" id="modal-rating-input" min="0" max="100" value="80" step="5">
+              <span id="modal-rating-val">80%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="checkbox-form-group">
+          <label class="custom-checkbox-container">
+            <input type="checkbox" id="modal-success-checkbox" checked>
+            <span class="checkmark"></span>
+            <span class="label-text">Solved Successfully (First Attempt / Clean Code)</span>
+          </label>
+          
+          <label class="custom-checkbox-container">
+            <input type="checkbox" id="modal-review-checkbox">
+            <span class="checkmark"></span>
+            <span class="label-text">Mark for Later Review (Needs reinforcement)</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Practice Notes / Key Learnings</label>
+          <textarea id="modal-notes-input" placeholder="What was the key insight? e.g. Used set lookup for O(1) searches. Watch out for edge cases with empty arrays." rows="4"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary-btn" id="modal-btn-cancel">Cancel</button>
+        <button class="primary-btn" id="modal-btn-save">Save Practice Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Import Backup Data -->
+  <div class="modal" id="modal-import-data">
+    <div class="modal-content glassmorphism">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-upload text-blue"></i> Import Progress Backup</h3>
+        <button class="modal-close" id="modal-import-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Paste the JSON backup string exported from your previous sessions below to load your progress.</p>
+        <div class="form-group">
+          <textarea id="import-json-textarea" placeholder='{"1": {"completed": true, "success": true, ...}}' rows="10" style="font-family: 'JetBrains Mono', monospace; font-size: 13px;"></textarea>
+        </div>
+        <div class="alert-message warning-alert" style="display: none;" id="import-error-alert">
+          <i class="fa-solid fa-circle-exclamation"></i> Invalid JSON string or format.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary-btn" id="import-btn-cancel">Cancel</button>
+        <button class="primary-btn" id="import-btn-submit">Import Data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification System Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="problems.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

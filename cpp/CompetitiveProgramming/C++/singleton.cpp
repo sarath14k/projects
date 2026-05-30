@@ -1,68 +1,48 @@
+/* 
+SINGLETON PATTERN
+Definition: Ensures a class has only one instance and provides a global point of access to it.
+Use Case: Database connections, Loggers, Thread pools, Configuration settings.
+*/
 #include <iostream>
+#include <memory>
 #include <string>
-#include <thread>
-#include <mutex>
 
-using namespace std;
-
-class Logger
-{
-    static int ctr;
-    static Logger *loggerInstance;
-    static mutex mtx;
-
-    Logger()
-    {
-        ctr++;
-        cout << "New instance created " << ctr << endl;
-    }
-
+class Database {
 public:
-    static Logger *getLogger()
-    {
-        lock_guard<mutex> lock(mtx); // Lock to ensure thread safety
-        if (loggerInstance == nullptr)
-        {
-            loggerInstance = new Logger();
-        }
+  // 1. Access point: Static method to get the single instance
+  static Database &getInstance() {
+    // C++11 guarantees this initialization is thread-safe!
+    static Database instance;
+    return instance;
+  }
 
-        return loggerInstance;
-    }
+  void query(std::string sql) {
+    std::cout << "Executing: " << sql << std::endl;
+  }
 
-    void log(const string &message)
-    {
-        cout << "Logging message: " << message << endl;
-    }
+  // 2. IMPORTANT: Remove the ability to copy or clone the instance
+  // Database d2 = d1; -> Error
+  Database(const Database &) = delete;
 
-    ~Logger()
-    {
-        delete loggerInstance;
-        loggerInstance = nullptr;
-    }
+  // Database d2; d2 = d1; -> Error
+  void operator=(const Database &) = delete;
+
+private:
+  // 3. Private constructor: Prevents creating objects outside the class using 'new Database()'
+  Database() { std::cout << "Database Connection Opened." << std::endl; }
 };
 
-int Logger::ctr = 0;
-Logger *Logger::loggerInstance = nullptr;
-mutex Logger::mtx;
+int main() {
+  // --- Singleton Demo ---
+  std::cout << "--- Singleton ---" << std::endl;
+  
+  // Database::getInstance() returns a reference to the static object.
+  // We then immediately call .query() on that reference (Method Chaining).
+  Database::getInstance().query("SELECT * FROM users");
+  
+  // We can also store the reference if we want to use it multiple times.
+  Database &db = Database::getInstance();
+  db.query("DROP TABLE bugs");
 
-void user1Logs()
-{
-    Logger *logger1 = Logger::getLogger();
-    logger1->log("This is user 1\n");
-}
-
-void user2Logs()
-{
-    Logger *logger2 = Logger::getLogger();
-    logger2->log("This is user 2\n");
-}
-
-int main()
-{
-    thread t1(user1Logs);
-    thread t2(user2Logs);
-
-    t1.join();
-    t2.join();
-    return 0;
+  return 0;
 }

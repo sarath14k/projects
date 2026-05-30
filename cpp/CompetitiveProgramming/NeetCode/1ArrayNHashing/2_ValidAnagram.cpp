@@ -19,6 +19,31 @@ public:
     }
 };
 
+/*
+ * =======================================================
+ * DEBUGGER TRACE (Visualizing Test Case 2: s = "rat", t = "car")
+ * =======================================================
+ * Init: unordered_map charCount = empty {}
+ * 
+ * First Loop (Building charCount from 's' = "rat"):
+ *   - c = 'r': charCount['r'] = 1
+ *   - c = 'a': charCount['a'] = 1
+ *   - c = 't': charCount['t'] = 1
+ *   - charCount is now { {'r':1}, {'a':1}, {'t':1} }
+ * 
+ * Second Loop (Checking characters from 't' = "car"):
+ *   - c = 'c':
+ *     - Evaluates: if(charCount['c']-- == 0)
+ *     - Since 'c' was never added to the map, accessing charCount['c'] 
+ *       automatically initializes it to 0.
+ *     - So it checks: if (0 == 0) -> TRUE!
+ *     - return false! -> Exits early, "car" has a letter not in "rat".
+ * 
+ * Time Complexity: O(S + T) - We iterate through both strings once.
+ * Space Complexity: O(1) - The hash map stores at most 26 characters (constant space).
+ * =======================================================
+ */
+
 // Simple main function to test both versions
 int main() {
     Solution optimizedSol;  // Using just "Solution" for the optimized version

@@ -88,6 +88,34 @@ void createCycle(Node* head, int pos) {
     }
 }
 
+/*
+ * =======================================================
+ * DEBUGGER TRACE (Visualizing Floyd's Tortoise and Hare Algorithm)
+ * =======================================================
+ * List: 3 -> 2 -> 0 -> -4 
+ *            ^          |
+ *            |----------|  (Cycle loops back to index 1, value '2')
+ * 
+ * Init: slow = Node(3), fast = Node(3)
+ * 
+ * Iteration 1:
+ *   - fast moves 2 steps: 3 -> 2 -> 0.   (fast is now at 0)
+ *   - slow moves 1 step:  3 -> 2.        (slow is now at 2)
+ *   - Is fast (0) == slow (2)? False.
+ * 
+ * Iteration 2:
+ *   - fast moves 2 steps: 0 -> -4 -> 2.  (fast is now at 2)
+ *   - slow moves 1 step:  2 -> 0.        (slow is now at 0)
+ *   - Is fast (2) == slow (0)? False.
+ * 
+ * Iteration 3:
+ *   - fast moves 2 steps: 2 -> 0 -> -4.  (fast is now at -4)
+ *   - slow moves 1 step:  0 -> -4.       (slow is now at -4)
+ *   - Is fast (-4) == slow (-4)? TRUE!
+ *   - return true! -> Exits early, cycle detected.
+ * =======================================================
+ */
+
 int main() {
     Solution solution;
 

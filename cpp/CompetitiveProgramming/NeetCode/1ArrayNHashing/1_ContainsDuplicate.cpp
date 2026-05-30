@@ -17,6 +17,33 @@ class Solution{
         }
 };
 
+/*
+ * =======================================================
+ * DEBUGGER TRACE (Visualizing Test Case 1: nums = {1, 2, 3, 1})
+ * =======================================================
+ * Init: st = empty {}
+ * 
+ * Iteration 1: num = 1
+ *   - st.count(1) == false.
+ *   - st.insert(1) -> st is now {1}
+ * 
+ * Iteration 2: num = 2
+ *   - st.count(2) == false.
+ *   - st.insert(2) -> st is now {1, 2}
+ * 
+ * Iteration 3: num = 3
+ *   - st.count(3) == false.
+ *   - st.insert(3) -> st is now {1, 2, 3}
+ * 
+ * Iteration 4: num = 1
+ *   - st.count(1) == TRUE! (Because 1 is already in the set)
+ *   - return true! -> Exits early, duplicate found.
+ * 
+ * Time Complexity: O(N) - We iterate through the array at most once.
+ * Space Complexity: O(N) - In the worst case (no duplicates), we store all N elements in the hash set.
+ * =======================================================
+ */
+
 // Simple main function to test both versions
 int main() {
     // Create instances of both Original and Optimized Solution classes

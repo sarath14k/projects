@@ -27,6 +27,30 @@
         return strList;
     }
 
+    /*
+     * =======================================================
+     * DEBUGGER TRACE (Visualizing Encode / Decode)
+     * =======================================================
+     * Encode (input = {"hello", "world", "test"}):
+     *   - str = "hello" -> enc_string += "hello|"
+     *   - str = "world" -> enc_string += "world|"
+     *   - str = "test"  -> enc_string += "test|"
+     *   - Final encoded: "hello|world|test|"
+     * 
+     * Decode (enc_string = "hello|world|test|"):
+     *   - Char Loop: 'h', 'e', 'l', 'l', 'o' -> temp = "hello"
+     *   - Hit '|' -> strList.emplace_back("hello"), temp.clear()
+     *   - Char Loop: 'w', 'o', 'r', 'l', 'd' -> temp = "world"
+     *   - Hit '|' -> strList.emplace_back("world"), temp.clear()
+     *   - Char Loop: 't', 'e', 's', 't' -> temp = "test"
+     *   - Hit '|' -> strList.emplace_back("test"), temp.clear()
+     *   - Return strList: ["hello", "world", "test"]
+     * 
+     * Time Complexity: O(N) - Where N is the total number of characters across all strings.
+     * Space Complexity: O(N) - We need extra space to build the encoded string and decode it back into a list.
+     * =======================================================
+     */
+
     int main() {
         vector<string> input = {"hello", "world", "test"};
 

@@ -1,0 +1,90 @@
+# VTable & VPointers: Runtime Polymorphism in C++
+
+Based on the core concepts of Low-Level Design (LLD) and C++ object-oriented principles, here is a detailed breakdown of how runtime polymorphism works under the hood.
+
+## Key Concepts
+
+When you use the `virtual` keyword in C++, you enable **Runtime Polymorphism** (or Late Binding / Dynamic Binding). This means the exact function to call is determined at runtime rather than compile-time. The compiler achieves this using **VTable** (Virtual Table) and **VPointer** (Virtual Pointer or `vptr`).
+
+### 1. VTable (Virtual Table)
+- **What it is:** A static array of function pointers created by the compiler.
+- **When is it created?** It is created at compile-time for any class that contains at least one virtual function (or inherits one). 
+- **Scope:** There is exactly **one VTable per class**. All objects of the same class share the same VTable.
+- **Purpose:** It maps the virtual functions to their most derived implementations available to that class.
+
+### 2. VPointer (Virtual Pointer / `vptr`)
+- **What it is:** A hidden pointer injected by the compiler into your class.
+- **When is it created?** When an object of a class with virtual functions is instantiated.
+- **Scope:** There is **one `vptr` per object**. It typically resides at the very beginning of the object's memory layout.
+- **Purpose:** It points directly to the VTable of the class to which the object belongs.
+
+---
+
+## The Internal Mechanism (Step-by-Step)
+1. **Compilation:** If a class has virtual functions, the compiler creates a VTable for it.
+2. **Instantiation:** When you create an object (`Base* b = new Derived()`), the compiler inserts code in the constructor to initialize the `vptr` to point to `Derived`'s VTable.
+3. **Function Call:** When you call `b->show()`, the compiler doesn't blindly link it to `Base::show()`. Instead, it looks up the `vptr` inside the object `b` points to.
+4. **Resolution:** The `vptr` points to the `Derived` VTable. It finds the memory address of the `show()` function in that table and executes it.
+
+---
+
+## Visual Diagram (VTable & VPointer Mapping)
+
+Below is an internal layout based on a typical `Base` and `Derived` class relationship.
+
+```mermaid
+flowchart LR
+    %% Objects
+    subgraph Instances ["Memory: Objects (vptr)"]
+        direction TB
+        B_Obj["Base Object\n[ vptr ]"]
+        D_Obj["Derived Object\n[ vptr ]"]
+    end
+
+    %% VTables
+    subgraph VTables ["Memory: Class VTables (Static Arrays)"]
+        direction TB
+        Base_VTable["Base VTable\n1. Base::show()\n2. Base::print()"]
+        Derived_VTable["Derived VTable\n1. Derived::show()\n2. Base::print()"]
+    end
+
+    %% Actual Functions
+    subgraph CodeSegment ["Memory: Code Segment (Actual Functions)"]
+        direction TB
+        B_show["Base::show()"]
+        B_print["Base::print()"]
+        D_show["Derived::show()"]
+    end
+
+    %% vptr to VTable mapping
+    B_Obj -- "Points to" --> Base_VTable
+    D_Obj -- "Points to" --> Derived_VTable
+
+    %% VTable to Function mapping
+    Base_VTable -. "Slot 1" .-> B_show
+    Base_VTable -. "Slot 2" .-> B_print
+
+    Derived_VTable -. "Slot 1 (Overridden)" .-> D_show
+    Derived_VTable -. "Slot 2 (Inherited)" .-> B_print
+    
+    classDef object fill:#1e1e1e,stroke:#3498db,stroke-width:2px,color:#fff;
+    classDef vtable fill:#2d3436,stroke:#e74c3c,stroke-width:2px,color:#fff;
+    classDef func fill:#27ae60,stroke:#2ecc71,stroke-width:2px,color:#fff;
+    
+    class B_Obj,D_Obj object;
+    class Base_VTable,Derived_VTable vtable;
+    class B_show,B_print,D_show func;
+```
+
+> [!NOTE] 
+> Notice how the `Derived VTable` points to `Derived::show()` (because it was overridden) but still points to `Base::print()` (because it was inherited and not overridden).
+
+---
+
+## Size Implications
+Because the compiler adds a `vptr` to the object, the size of your object increases.
+- On a 32-bit system, an empty class with virtual functions is typically **4 bytes**.
+- On a 64-bit system, it is typically **8 bytes** (due to the pointer size).
+
+> [!WARNING]
+> Virtual functions incur a slight performance penalty because resolving the function call requires two pointer dereferences (first getting the `vptr`, then fetching the function address from the VTable).

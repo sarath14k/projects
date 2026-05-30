@@ -41,11 +41,12 @@ def main():
             
             subprocess.run(['notify-send', '📥 Downloading...', get_label(chosen_sub)])
             
-            # DOWNLOAD & FORCE SAVE TO VIDEO DIRECTORY
+            # DOWNLOAD & FORCE SAVE TO DOWNLOADS SUBS DIRECTORY
+            dest_dir = os.path.expanduser('~/Downloads/subs')
             download_subtitles([chosen_sub])
-            save_subtitles(video, [chosen_sub], directory=video_dir)
+            save_subtitles(video, [chosen_sub], directory=dest_dir)
             
-            subprocess.run(['notify-send', '✅ Success', f'Subtitles saved to: {video_dir}'])
+            subprocess.run(['notify-send', '✅ Success', f'Subtitles saved to: {dest_dir}'])
             
     except Exception as e:
         subprocess.run(['zenity', '--error', '--text', f'Error: {str(e)}'])
