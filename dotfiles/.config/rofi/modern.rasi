@@ -1,0 +1,121 @@
+/*******************************************************************************
+ * MODERN PREMIUM GLOW THEME FOR ROFI
+ *******************************************************************************/
+
+* {
+    /* Theme colors */
+    bg-col:      #0f101add;  /* Translucent dark background */
+    bg-col-light:#1d1f2ecc;  /* Slightly lighter dark container */
+    border-col:  #7aa2f788;  /* Translucent blue border */
+    selected-col:#2b304acc;  /* Selected element background */
+    blue:        #7aa2f7;    /* Primary blue highlight */
+    cyan:        #7dcfff;    /* Secondary cyan accent */
+    magenta:     #bb9af7;    /* Magenta accent */
+    fg-col:      #a9b1d6;    /* Soft lavender text */
+    fg-col-light:#c0caf5;    /* Brighter text */
+    fg-col-dim:  #565f89;    /* Muted/grey text */
+    
+    font: "JetBrainsMono Nerd Font 12";
+    background-color: transparent;
+    text-color: @fg-col;
+}
+
+window {
+    width:            650px;
+    height:           420px;
+    border:           2px;
+    border-color:     @magenta; /* Beautiful accent border */
+    border-radius:    16px;
+    background-color: @bg-col;
+    anchor:           center;
+    location:         center;
+}
+
+mainbox {
+    background-color: transparent;
+    padding:          20px;
+    children:         [ inputbar, listview, mode-switcher ];
+}
+
+inputbar {
+    margin:           0px 0px 15px 0px;
+    padding:          12px;
+    background-color: @bg-col-light;
+    border:           1px;
+    border-color:     #7aa2f733;
+    border-radius:    12px;
+    children:         [ prompt, entry ];
+}
+
+prompt {
+    background-color: @blue;
+    padding:          6px 10px;
+    text-color:       #0f101a;
+    border-radius:    8px;
+    font:             "JetBrainsMono Nerd Font Bold 12";
+}
+
+entry {
+    padding:          6px;
+    text-color:       @fg-col-light;
+    placeholder:      "Search apps...";
+    placeholder-color: @fg-col-dim;
+}
+
+listview {
+    border:           0px;
+    padding:          5px 0px 0px;
+    margin:           5px 0px 0px;
+    columns:          1;
+    lines:            6;
+    spacing:          8px;
+    background-color: transparent;
+}
+
+element {
+    padding:          10px;
+    background-color: transparent;
+    text-color:       @fg-col;
+    border-radius:    10px;
+    cursor:           pointer;
+}
+
+element-icon {
+    size:             32px;
+    margin:           0px 12px 0px 0px;
+    cursor:           inherit;
+}
+
+element-text {
+    vertical-align:   0.5;
+    text-color:       inherit;
+    cursor:           inherit;
+}
+
+element selected {
+    background-color: @selected-col;
+    text-color:       #ffffff;
+    border:           1px;
+    border-color:     @cyan;
+}
+
+mode-switcher {
+    spacing:          10px;
+    margin:           10px 0px 0px 0px;
+}
+
+button {
+    padding:          8px;
+    background-color: @bg-col-light;
+    text-color:       @fg-col-dim;
+    vertical-align:   0.5; 
+    horizontal-align: 0.5;
+    border-radius:    8px;
+    cursor:           pointer;
+}
+
+button selected {
+    background-color: @magenta;
+    text-color:       #0f101a;
+    font:             "JetBrainsMono Nerd Font Bold 12";
+}
