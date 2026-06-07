@@ -9,8 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusText = document.getElementById('status-text');
     const statusDot = document.getElementById('status-dot');
     const volumeLabel = document.getElementById('volume-label');
-    const typeInput = document.getElementById('type-input');
-    const btnSendText = document.getElementById('btn-send-text');
+    const keyboardInput = document.getElementById('keyboard-input');
+    const keyboardArea = keyboardInput.parentElement;
 
     // Display host IP
     ipDisplay.textContent = `Host: ${window.location.hostname || 'localhost'}:${window.location.port || '5000'}`;
@@ -208,20 +208,54 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Text typing
-    btnSendText.addEventListener('click', () => {
-        const text = typeInput.value;
-        if (text) {
-            vibrate(20);
-            sendCommand('/api/keyboard/type', { text });
-            typeInput.value = '';
-        }
+    // Real-time Keyboard Handling
+    const initValue = "  "; // two spaces
+    keyboardInput.value = initValue;
+
+    keyboardInput.addEventListener('focus', () => {
+        keyboardArea.classList.add('focused');
+        keyboardInput.placeholder = "Keyboard Active - Type here...";
+    });
+    keyboardInput.addEventListener('blur', () => {
+        keyboardArea.classList.remove('focused');
+        keyboardInput.placeholder = "Tap to open keyboard...";
     });
 
-    typeInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            btnSendText.click();
+    keyboardArea.addEventListener('click', () => {
+        keyboardInput.focus();
+    });
+
+    keyboardInput.addEventListener('input', (e) => {
+        const val = keyboardInput.value;
+        const len = val.length;
+
+        if (len > initValue.length) {
+            const addedText = val.substring(initValue.length);
+            sendCommand('/api/keyboard/type', { text: addedText });
+        } else if (len < initValue.length) {
+            const diff = initValue.length - len;
+            for (let i = 0; i < diff; i++) {
+                sendCommand('/api/keyboard/key', { key: 'backspace' });
+            }
         }
+        keyboardInput.value = initValue;
+    });
+
+    keyboardInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            vibrate(10);
+            sendCommand('/api/keyboard/key', { key: 'enter' });
+            e.preventDefault();
+        } else if (e.key === 'Tab') {
+            vibrate(10);
+            sendCommand('/api/keyboard/key', { key: 'tab' });
+            e.preventDefault();
+        } else if (e.key === 'Escape') {
+            vibrate(10);
+            sendCommand('/api/keyboard/key', { key: 'esc' });
+            e.preventDefault();
+        }
+        keyboardInput.value = initValue;
     });
 
     // --- System Controls ---
