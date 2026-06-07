@@ -143,6 +143,8 @@ class ConversionManager:
                 # For now, if result is None and not stop_requested, mark as error.
                 if not self.stop_requested:
                     ui(setattr, row, "status", "failed")
+                else:
+                    ui(row.reset_status)
 
         self.sleep_inhibitor.stop()
         ui(self._on_queue_finished)
@@ -163,7 +165,7 @@ class ConversionManager:
         params["quality"] = q_map.get(p.get("quality_text"), 23 if "CPU" not in codec_key else 6)
 
         # Get video info
-        duration, fps, input_codec, src_bitrate, width = utils.get_video_info(row.path)
+        duration, fps, input_codec, src_bitrate, width, height = utils.get_video_info(row.path)
 
         # Calculate target and max bitrate (bits/s to match FFmpeg expectation)
         quality_val = params["quality"]
@@ -197,6 +199,18 @@ class ConversionManager:
         row.out_path = Path(final_out_path)
         self.window.last_output_dir = final_out_dir
 
+        # Resolve duration for progress bar
+        encode_duration = duration
+        if p.get("trim_enabled", False):
+            try:
+                from ..utils import parse_time_to_seconds
+                s_sec = parse_time_to_seconds(p.get("start_time", "00:00:00"))
+                e_sec = parse_time_to_seconds(p.get("end_time", str(duration)))
+                if e_sec > s_sec:
+                    encode_duration = e_sec - s_sec
+            except Exception:
+                pass
+
         cmd = build_ffmpeg_command(
             str(row.path),
             str(row.out_path),
@@ -211,9 +225,13 @@ class ConversionManager:
             compression_level=params["compression_level"],
             process_mode=mode_label,
             audio_codec_key=audio_label,
+            crop=p.get("crop", None),
+            trim_enabled=p.get("trim_enabled", False),
+            start_time=p.get("start_time", "00:00:00"),
+            end_time=p.get("end_time", None),
         )
 
-        parser = ProgressParser(duration, fps)
+        parser = ProgressParser(encode_duration, fps)
 
         row.log_data = [] # Reset log
         row.log_data.append(f"Command: {' '.join(cmd)}\n")

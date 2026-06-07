@@ -21,10 +21,15 @@ class FileManager:
                 continue
 
             row_id = str(uuid.uuid4())
+            row_params = params.copy()
+            row_params["crop"] = None
+            row_params["trim_enabled"] = False
+            row_params["start_time"] = "00:00:00"
+            row_params["end_time"] = None
             row = FileRow(
                 p,
                 self.remove_file,
-                params=params.copy(),
+                params=row_params,
                 row_id=row_id
             )
             self.window.file_list_box.add(row.root)
@@ -193,7 +198,17 @@ class FileManager:
         """Apply current sidebar settings to all files in the queue."""
         params = self._get_current_params()
         for row in self.files.values():
+            existing_crop = row.params.get("crop", None)
+            existing_trim = row.params.get("trim_enabled", False)
+            existing_start = row.params.get("start_time", "00:00:00")
+            existing_end = row.params.get("end_time", None)
+            
             row.params.update(params)
+            
+            row.params["crop"] = existing_crop
+            row.params["trim_enabled"] = existing_trim
+            row.params["start_time"] = existing_start
+            row.params["end_time"] = existing_end
             # Check for conflict with new settings
             q_map = (
                 self.window.active_quality_map

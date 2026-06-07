@@ -153,6 +153,24 @@ def format_time(sec):
     h, m = divmod(m, 60)
     return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
+def parse_time_to_seconds(time_str):
+    """Parse format HH:MM:SS, MM:SS or seconds to float."""
+    if not time_str:
+        return 0.0
+    try:
+        return float(time_str)
+    except ValueError:
+        pass
+    parts = str(time_str).split(':')
+    try:
+        if len(parts) == 2:
+            return float(parts[0]) * 60 + float(parts[1])
+        elif len(parts) >= 3:
+            return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+    except ValueError:
+        pass
+    return 0.0
+
 def get_render_devices():
     """Get available GPU render devices."""
     devs = glob.glob("/dev/dri/renderD*")
@@ -182,7 +200,7 @@ def get_video_info(file_path):
     """Get video file metadata using ffprobe.
 
     Returns:
-        tuple: (duration, fps, codec, bitrate, width)
+        tuple: (duration, fps, codec, bitrate, width, height)
     """
     try:
         cmd = [
@@ -192,7 +210,7 @@ def get_video_info(file_path):
             "-select_streams",
             "v:0",
             "-show_entries",
-            "format=duration,bit_rate:stream=r_frame_rate,codec_name,width,bit_rate",
+            "format=duration,bit_rate:stream=r_frame_rate,codec_name,width,height,bit_rate",
             "-of",
             "json",
             file_path,
@@ -217,10 +235,11 @@ def get_video_info(file_path):
         )
         codec = data["streams"][0].get("codec_name", "unknown")
         width = int(data["streams"][0].get("width", 1920))
+        height = int(data["streams"][0].get("height", 1080))
 
-        return dur, fps, codec, src_bitrate, width
+        return dur, fps, codec, src_bitrate, width, height
     except:
-        return 1.0, 30.0, "unknown", 5_000_000, 1920
+        return 1.0, 30.0, "unknown", 5_000_000, 1920, 1080
 
 def generate_output_path(
     src_path,

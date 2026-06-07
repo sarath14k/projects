@@ -30,4 +30,15 @@ if __name__ == "__main__":
     check_dependencies()
     app = VideoConverter()
     app.show_all()
+    
+    if len(sys.argv) > 1:
+        paths_to_add = []
+        for arg in sys.argv[1:]:
+            p = Path(arg).resolve()
+            if p.exists() and p.is_file():
+                paths_to_add.append(str(p))
+        if paths_to_add:
+            # Load files in a idle callback to ensure GTK is ready
+            GLib.idle_add(lambda: app.file_manager.add_files(paths_to_add) and False)
+            
     Gtk.main()

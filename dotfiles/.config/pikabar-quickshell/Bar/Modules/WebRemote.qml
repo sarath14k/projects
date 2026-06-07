@@ -11,6 +11,23 @@ Item {
 
     property bool isActive: false
     property string statusText: "..."
+    property string localIp: "127.0.0.1"
+
+    Process {
+        id: ipProcess
+        command: ["bash", "-c", "ip route get 1.1.1.1 2>/dev/null | awk '{print $7}' || hostname -I | awk '{print $1}'"]
+        stdout: StdioCollector {}
+        onExited: {
+            let ip = String(stdout.text).trim();
+            if (ip) {
+                localIp = ip;
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        ipProcess.running = true;
+    }
 
     Process {
         id: statusProcess
@@ -56,8 +73,9 @@ Item {
 
         ToolTip {
             visible: parent.containsMouse
-            text: "Web Remote: " + root.statusText + "\nIP: 192.168.1.12:5000"
+            text: "Web Remote: " + root.statusText + "\nIP: " + root.localIp + ":5000"
             delay: 500
         }
     }
 }
+

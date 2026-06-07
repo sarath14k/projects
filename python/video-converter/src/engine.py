@@ -15,11 +15,16 @@ def build_ffmpeg_command(
     compression_level=4,
     process_mode="Video + Audio",
     audio_codec_key="Copy",
+    crop=None,
+    trim_enabled=False,
+    start_time="00:00:00",
+    end_time=None,
 ):
     # Check if using CPU - either codec type is CPU OR device is "cpu"
     is_cpu = codec_conf["type"] == "cpu" or device_path == "cpu"
 
     # Force CPU decoding ONLY for codecs that often have poor/no VAAPI support
+    # or when cropping is requested (since the standard crop filter runs on CPU)
     problematic_vaapi_decoders = {
         "av1",
         "mpeg4",
@@ -29,7 +34,7 @@ def build_ffmpeg_command(
         "flv1",
         "vp8",
     }
-    force_cpu_decode = input_codec in problematic_vaapi_decoders and not is_cpu
+    force_cpu_decode = (input_codec in problematic_vaapi_decoders and not is_cpu) or (crop is not None and not is_cpu)
 
     cmd = [
         "ffmpeg",
@@ -42,6 +47,12 @@ def build_ffmpeg_command(
         "-loglevel",
         "warning",
     ]
+
+    if trim_enabled and start_time:
+        from .utils import parse_time_to_seconds
+        start_sec = parse_time_to_seconds(start_time)
+        if start_sec > 0:
+            cmd.extend(["-ss", f"{start_sec:.3f}"])
 
     if not is_cpu:
         # Initialize VAAPI device with optimized thread queue
@@ -63,6 +74,14 @@ def build_ffmpeg_command(
 
     cmd.extend(["-i", file])
 
+    if trim_enabled and end_time:
+        from .utils import parse_time_to_seconds
+        start_sec = parse_time_to_seconds(start_time)
+        end_sec = parse_time_to_seconds(end_time)
+        if end_sec > start_sec:
+            dur = end_sec - start_sec
+            cmd.extend(["-t", f"{dur:.3f}"])
+
     if process_mode == "Audio Only":
         cmd.append("-vn")
     else:
@@ -70,11 +89,15 @@ def build_ffmpeg_command(
         should_scale = limit_1080p and (width > 1920)
 
         if is_cpu:
+            if crop:
+                vf_chain.append(f"crop={crop}")
             if should_scale:
                 vf_chain.append("scale='min(1920,iw)':-2")
             vf_chain.append(f"format={codec_conf['fmt']}")
         else:
             if force_cpu_decode:
+                if crop:
+                    vf_chain.append(f"crop={crop}")
                 # Decoded on CPU, upload to GPU for filtering/encoding
                 if codec_conf["fmt"] == "p010":  # 10-bit
                     vf_chain.append("format=p010,hwupload")

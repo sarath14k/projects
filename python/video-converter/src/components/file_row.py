@@ -248,6 +248,15 @@ class FileRow:
         self.status = "completed"
         self.progress.get_style_context().add_class("success-bar")
 
+    def reset_status(self):
+        self.status = "pending"
+        self.progress.set_fraction(0.0)
+        self.progress.get_style_context().remove_class("success-bar")
+        self.info.set_markup("Pending...")
+        self.play_btn.set_visible(False)
+        self.log_btn.set_visible(False)
+        self.log_data.clear()
+
     def set_reorder_locked(self, locked):
         if locked:
             self.root.drag_source_unset()
@@ -318,22 +327,20 @@ class FileRow:
         self.info.set_markup(markup)
 
     def on_settings_clicked(self, btn):
-        dialog = FileSettingsDialog(self.root.get_toplevel(), self.params)
+        dialog = FileSettingsDialog(self.root.get_toplevel(), self.params, self.path)
         if dialog.run() == Gtk.ResponseType.OK:
             self.params = dialog.get_params()
-            # Re-check conflict if settings changed (though out_path depends on quality)
-            # For simplicity, we can let FileManager handle update if needed, 
-            # but current architecture calculates out_path just before encoding or on add.
-            # We should probably update the out_path or at least visual indicators here if needed.
+            self.reset_status()
         dialog.destroy()
 
 class FileSettingsDialog(Gtk.Dialog):
-    def __init__(self, parent, params):
+    def __init__(self, parent, params, video_path):
         super().__init__(title="File Conversion Settings", transient_for=parent, flags=0)
         self.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK)
         self.set_default_size(400, -1)
         
         self.params = params.copy()
+        self.video_path = video_path
         
         box = self.get_content_area()
         box.set_spacing(10)
@@ -387,12 +394,48 @@ class FileSettingsDialog(Gtk.Dialog):
             self.audio_codec, self.params.get("audio_codec", "Copy")
         )
         self._add_row(box, "Audio Codec", self.audio_codec)
+
+        # Get video duration
+        info = utils.get_video_info(str(self.video_path))
+        self.duration = info[0] # seconds
+
+        # Cut / Trim Video
+        self.trim_chk = Gtk.Switch()
+        self.trim_chk.set_active(self.params.get("trim_enabled", False))
+        self.trim_chk.set_halign(Gtk.Align.START)
+        self._add_row(box, "Enable Cut / Trim", self.trim_chk)
+
+        # Start Time entry
+        self.start_entry = Gtk.Entry()
+        self.start_entry.set_text(self.params.get("start_time", "00:00:00"))
+        self.start_entry.set_tooltip_text("Format: HH:MM:SS or seconds")
+        self._add_row(box, "Start Time", self.start_entry)
+
+        # End Time entry
+        self.end_entry = Gtk.Entry()
+        default_end = utils.format_time(self.duration)
+        self.end_entry.set_text(self.params.get("end_time") or default_end)
+        self.end_entry.set_tooltip_text("Format: HH:MM:SS or seconds")
+        self._add_row(box, "End Time", self.end_entry)
+
+        self.trim_chk.connect("state-set", self.on_trim_toggled)
+        self._update_trim_entries_sensitivity()
         
         # Initial quality populate
         self.on_codec_changed(self.codec)
         self._set_combo_text(self.quality, self.params.get("quality_text"))
         
         self.show_all()
+
+    def on_trim_toggled(self, switch, state):
+        self.start_entry.set_sensitive(state)
+        self.end_entry.set_sensitive(state)
+        return False
+
+    def _update_trim_entries_sensitivity(self):
+        state = self.trim_chk.get_active()
+        self.start_entry.set_sensitive(state)
+        self.end_entry.set_sensitive(state)
 
     def _add_row(self, box, label, widget):
         row = Gtk.Box(spacing=10)
@@ -429,4 +472,8 @@ class FileSettingsDialog(Gtk.Dialog):
             "scale": self.scale_chk.get_active(),
             "process_mode": self.process_mode.get_active_text(),
             "audio_codec": self.audio_codec.get_active_text(),
+            "crop": self.params.get("crop", None),
+            "trim_enabled": self.trim_chk.get_active(),
+            "start_time": self.start_entry.get_text(),
+            "end_time": self.end_entry.get_text(),
         }
