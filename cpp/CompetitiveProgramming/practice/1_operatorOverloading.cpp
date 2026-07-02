@@ -1,32 +1,23 @@
 #include <iostream>
 using namespace std;
 
-class Complex{
-    double real, imag;
-    public:
-        Complex(double r, double i) : real(r), imag(i) {}
-
-        //Overloading '+' operator
-        Complex operator+(const Complex& other)
-        {
-            return Complex(real + other.real, imag + other.imag);
-        }
-
-        void display()
-        {
-            cout << this->real << '+' << this->imag << 'i'<< endl;
-        }
-
+class Point {
+	public:
+		int x, y;
+		Point operator+(const Point& other) {
+			Point temp;
+			temp.x = this->x + other.x;
+			temp.y = this->y + other.y;
+			return temp;
+		}
 };
 
-int main()
-{
-    Complex c1(1.0,2.0);
-    Complex c2(2.0,3.0);
+int main() {
+	Point p1; p1.x = 10; p1.y = 20;
+	Point p2; p2.x = 5; p2.y = 5;
 
-    // Uses overloaded '+' operator
-    Complex c3 = c1 + c2;
-    c3.display();
-
-    return 0;
+	// Usese the overload operator
+	Point p3 = p1 + p2;
+	cout << "New point: " << p3.x << ", " << p3.y << '\n';
+	return 0;
 }
