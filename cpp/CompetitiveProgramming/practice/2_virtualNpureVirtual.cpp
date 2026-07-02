@@ -1,53 +1,34 @@
 #include <iostream>
 using namespace std;
+
 // Base class
-class Animal {
+class Shape {
 public:
-    virtual void makeSound()  { // Virtual function
-        cout << "Some generic animal sound" << endl;
-    }
-
-    virtual void eat()  = 0; // Pure virtual function
-    virtual ~Animal(){
-    }
+    virtual void draw() = 0; // Pure virtual function (forces children to implement it)
 };
 
-// Derived class: Dog
-class Dog : public Animal {
+// Derived class 1
+class Circle : public Shape {
 public:
-    void makeSound()  { // Override the virtual function
-        cout << "Woof!" << endl;
-    }
-
-    void eat()  { // Implement the pure virtual function
-        cout << "Dog is eating." << endl;
-    }
+    void draw() { cout << "Drawing a Circle" << endl; }
 };
 
-// Derived class: Cat
-class Cat : public Animal {
+// Derived class 2
+class Square : public Shape {
 public:
-    void makeSound() override { // Override the virtual function
-        cout << "Meow!" << endl;
-    }
-
-    void eat()  override { // Implement the pure virtual function
-        cout << "Cat is eating." << endl;
-    }
+    void draw() { cout << "Drawing a Square" << endl; }
 };
 
 int main() {
-    Animal* myDog = new Dog();
-    Animal* myCat = new Cat();
+    Circle c;
+    Square s;
 
-    myDog->makeSound(); // Outputs: Woof!
-    myCat->makeSound(); // Outputs: Meow!
+    // Use a Base class reference to point to different objects
+    Shape& s1 = c; 
+    Shape& s2 = s;
 
-    myDog->eat(); // Outputs: Dog is eating.
-    myCat->eat(); // Outputs: Cat is eating.
-
-    delete myDog;
-    delete myCat;
+    s1.draw(); // Outputs: Drawing a Circle
+    s2.draw(); // Outputs: Drawing a Square
 
     return 0;
 }
