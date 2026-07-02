@@ -1,41 +1,29 @@
 #include <iostream>
 using namespace std;
 
-class Animal
-{
-    public:
-        virtual void sound()
-        {
-            cout << "Animal makes sound" << '\n';
-        }
-};
-class Dog : public Animal
-{
-    public:
-        void sound()
-        {
-            cout << "Bow Bow" << '\n';
-        }
+class Animal {
+public:
+    virtual void sound() { cout << "Generic Sound\n"; }
 };
 
-class Cat : public Animal
-{
-    public:
-        void sound()
-        {
-            cout << "Meow Meow" << '\n';
-        }
+class Dog : public Animal {
+public:
+    void sound() override { cout << "Bow Bow\n"; }
+};
+
+class Cat : public Animal {
+public:
+    void sound() override { cout << "Meow Meow\n"; }
 };
 
 int main() {
-    Animal* dog = new Dog();
-    Animal* cat = new Cat();
+    Dog d; 
+    Cat c;
 
-    dog -> sound();
-    cat -> sound();
+    // Pointing a Base reference to the Child objects triggers polymorphism
+    Animal& ref1 = d;
+    Animal& ref2 = c;
 
-    delete dog;
-    delete cat;
-
-
+    ref1.sound(); // Outputs: Bow Bow
+    ref2.sound(); // Outputs: Meow Meow
 }
