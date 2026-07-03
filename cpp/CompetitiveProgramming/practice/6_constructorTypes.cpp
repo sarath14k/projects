@@ -1,106 +1,55 @@
 #include <iostream>
-#include <cstring>
-#include <utility>
-
 using namespace std;
 
-class FileManager
-{
-    private:
-        char* data;
-        size_t size;
-    public:
-        // Default
-        FileManager() : data(nullptr), size(0)
-        {
-            cout << "Default called\n";
-        }
+class Number {
+public:
+    int* ptr;
 
-        // Parameterized
-        FileManager(const char* fileData) 
-        {
-            cout << "Parameterized called\n";
-            size = strlen(fileData);
-            data = new char[size + 1];
-            strcpy(data, fileData);
-        }
+    // 1. Default Constructor
+    Number() {
+        ptr = new int(0);
+        cout << "1. Default Constructor called (value = 0)\n";
+    }
 
-        //Copy
-        FileManager(const FileManager& other)
-        {
-            cout << "Copy called\n";
-            size = other.size;
-            if(size > 0)
-            {
-                data = new char[size + 1];
-                strcpy(data, other.data);
-            } else
-                data = nullptr;
-        }
+    // 2. Parameterized Constructor
+    Number(int val) {
+        ptr = new int(val);
+        cout << "2. Parameterized Constructor called (value = " << val << ")\n";
+    }
 
-        // Move
-        FileManager(FileManager&& other) noexcept : data(other.data), size(other.size)
-        {
-            cout << "Move called\n";
-            other.data = nullptr;
-            other.size = 0;
-        }
+    // 3. Copy Constructor (Deep Copy)
+    Number(const Number& other) {
+        ptr = new int(*other.ptr); // Allocates fresh memory and copies data
+        cout << "3. Copy Constructor called (Deep Copy of " << *ptr << ")\n";
+    }
 
-        //Move Assignment operator
-        FileManager& operator=(FileManager&& other) noexcept
-        {
-            cout << "Move assignment operator called\n";
-            if(this != &other)//Avoid self assignment 
-            {
-                delete[] data; // Free current data
-                data = other.data;
-                size = other.size;
+    // 4. Move Constructor (Resource Theft)
+    Number(Number&& other) noexcept {
+        ptr = other.ptr;         // Steal the memory address pointer
+        other.ptr = nullptr;     // Safely nullify old object pointer
+        cout << "4. Move Constructor called (Resource stolen)\n";
+    }
 
-                other.data = nullptr; //Leave other in a valid state;
-                other.size = 0;
-            }
-            return *this;
+    // Destructor to prevent memory leaks
+    ~Number() {
+        if (ptr != nullptr) {
+            delete ptr;
         }
-
-        // Destructor
-        ~FileManager()
-        {
-            cout << "Destructor called\n";
-            delete[] data; // Free allocated memory
-        }
-
-        // Display file data
-        void display() const
-        {
-            if (data)
-                cout << "Data => " << data << '\n';
-            else
-                cout << "No data found\n";
-        }
+    }
 };
 
 int main() {
-    // Using default
-    FileManager file1;
-    file1.display();
+    // Triggers Default
+    Number n1; 
 
-    // Using param
-    FileManager file2("Hello, FileManager!");
-    file2.display();
+    // Triggers Parameterized
+    Number n2(42); 
 
-    // Using copy
-    FileManager file3 = file2;
-    file3.display();
+    // Triggers Copy (Creates an exact clone in fresh memory)
+    Number n3 = n2; 
 
-    // Using move
-    FileManager file4 = move(file2); // File2 is a temp rvalue
-    file4.display();
-    file2.display(); // now empty
-
-    // Using move assignment operator
-    file1 = move(file4); // move data from file4 to file1
-    file1.display();
-    file4.display();
+    // Triggers Move (Transfers data from n3 to n4 instantly without copying)
+    Number n4 = move(n3); 
 
     return 0;
 }
