@@ -5,7 +5,12 @@
 // Interface: Defines the common abstract base class for all products
 struct Item {
     virtual void show() = 0;        // Pure virtual function making this an interface; must be implemented by child classes
-    virtual ~Item() = default;      // Virtual destructor ensuring safe cleanup of child objects via base pointers
+    
+    // Virtual destructor ensuring safe cleanup of child objects via base pointers.
+    // Without 'virtual', deleting a child object through an Item* pointer would only call ~Item()
+    // and completely skip the child class destructor (e.g., ~IPhone()), causing a partial memory leak.
+    // '= default' tells the compiler to automatically generate the standard cleanup code for us.
+    virtual ~Item() = default;      
 };
 
 // Concrete Product 1: Inherits from Item and overrides show() for the iPhone implementation
