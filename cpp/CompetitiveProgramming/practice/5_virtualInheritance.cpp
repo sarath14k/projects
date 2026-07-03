@@ -1,53 +1,25 @@
 #include <iostream>
 using namespace std;
 
-// common base
-class Animal
-{
-    public:
-        Animal()
-        {
-            cout << "Animal Constructor called\n";
-        }
-        void speak()
-        {
-            cout << "Animal Speaks\n";
-        }
+// The grand-parent base class
+class Device {
+public:
+    int id = 99; // Shared variable
 };
 
-//Base 1
-class Mammal : virtual public Animal
-{
-    public:
-        Mammal()
-        {
-            cout << "Mammal Constructor\n";
-        }
+// Virtual base classes prevent duplicate "Device" copies
+class Camera : virtual public Device {};
+class Phone  : virtual public Device {};
 
-};
-//Base 2
-class Bird : virtual public Animal
-{
-    public:
-        Bird()
-        {
-            cout << "Bird Constructor\n";
-        }
+// The final derived class
+class SmartPhone : public Camera, public Phone {};
 
-};
+int main() {
+    SmartPhone myPhone;
 
-//Derived 
-class Bat : public Mammal, public Bird
-{
-    public:
-        Bat()
-        {
-            cout << "Bat Constructor\n";
-        }
-};
+    // WITHOUT 'virtual' above, this line throws a compile error: "id is ambiguous"
+    // WITH 'virtual', there is only ONE unified copy of 'id'.
+    cout << "Device ID: " << myPhone.id << endl; 
 
-int main(){
-    Bat myBat;
-    myBat.speak();
     return 0;
 }
