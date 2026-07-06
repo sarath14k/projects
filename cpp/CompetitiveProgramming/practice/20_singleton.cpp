@@ -1,46 +1,54 @@
 #include <iostream>
+#include <string>
 using namespace std;
 
 /*
  * ============================================================================
- * DESIGN PATTERN: SINGLETON
+ * DESIGN PATTERN: THREAD-SAFE SINGLETON (MEYERS' IMPLEMENTATION)
  * ============================================================================
  * PURPOSE:
- * Ensures that a class has exactly ONE instance globally across the entire 
- * program lifecycle and provides a single, global access point to it.
+ * Guarantees that only ONE instance of a class exists, even when accessed 
+ * by multiple execution threads concurrently, without requiring verbose or 
+ * slow manual mutex locks.
  *
  * KEY STRUCTURAL POINTS:
- * 1. Private Constructor: Prevents direct allocation using the 'new' keyword.
- * 2. Deleted Copy/Assignment: Prevents cloning or copying the unique instance.
- * 3. Static Instance Method: Manages the single lifecycle and returns it safely.
+ * 1. Static Local Variable: Thread-safety is built-in by core C++11 rules. The 
+ *    compiler automatically injects locks around static local initialization.
+ * 2. Delete Keywords: Expressly breaks copying mechanics so threads can't clone it.
  * ============================================================================
  */
 
-class DatabaseConnection {
+class ThreadSafeLogger {
 private:
-    // POINT 1: Hide the constructor so no one can execute 'new DatabaseConnection()'
-    DatabaseConnection() { cout << "Connected to Database!\n"; }
+    // POINT 1: Private constructor prevents any thread from calling 'new' directly.
+    ThreadSafeLogger() { 
+        cout << "Logger Safely Initialized Once Across All Threads.\n"; 
+    }
 
 public:
-    // POINT 2: Remove copy mechanics so copies can never accidentally be created
-    DatabaseConnection(const DatabaseConnection&) = delete;
-    DatabaseConnection& operator=(const DatabaseConnection&) = delete;
+    // POINT 2: Delete copy constructor and assignment operator to prevent cloning.
+    ThreadSafeLogger(const ThreadSafeLogger&) = delete;
+    ThreadSafeLogger& operator=(const ThreadSafeLogger&) = delete;
 
-    // POINT 3: Provide a global access function using Meyers' Singleton approach.
-    // This instance is lazily initialized on the very first call and is thread-safe.
-    static DatabaseConnection& getInstance() {
-        static DatabaseConnection instance; 
+    // POINT 1: Static function returning a reference to the single instance.
+    static ThreadSafeLogger& getInstance() {
+        // C++11 standard mandates this initialization is thread-safe!
+        // If thread B calls this while thread A is constructing it, thread B 
+        // will safely pause and wait until construction finishes.
+        static ThreadSafeLogger instance; 
         return instance;
     }
 
-    void query(const string& sql) {
-        cout << "Executing: " << sql << "\n";
+    void logMessage(const string& msg) {
+        cout << "[Log]: " << msg << "\n";
     }
 };
 
 int main() {
-    // Both calls interact with the exact same block of memory behind the scenes
-    DatabaseConnection::getInstance().query("SELECT * FROM users");
-    DatabaseConnection::getInstance().query("SELECT * FROM products");
+    // No matter which thread running concurrently executes this line, 
+    // they all get safely routed to the exact same memory instance.
+    ThreadSafeLogger::getInstance().logMessage("Application started successfully.");
+    ThreadSafeLogger::getInstance().logMessage("Processing transaction data...");
+    
     return 0;
 }
