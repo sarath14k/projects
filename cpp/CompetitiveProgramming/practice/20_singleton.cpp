@@ -4,61 +4,44 @@ using namespace std;
 
 /*
  * ============================================================================
- * DESIGN PATTERN: THE OFFICE COFFEE MACHINE (THREAD-SAFE SINGLETON)
+ * DESIGN PATTERN: COFFEE MACHINE SINGLETON (THREAD-SAFE)
  * ============================================================================
- * REAL-WORLD ANALOGY:
- * An office has many employees (Threads). Instead of wasting money buying every 
- * employee an individual desk coffee maker, the office sets up exactly ONE 
- * master coffee machine in the breakroom for everyone to share safely.
+ * ANALOGY: Multiple employees (Threads) share exactly ONE breakroom coffee 
+ * machine (Instance) instead of building individual ones.
  * ============================================================================
  */
 
-class OfficeCoffeeMachine {
+class CoffeeMachine {
 private:
-    // LIFE EXAMPLE: The warehouse is locked! 
-    // Making this constructor 'private' means employees are physically forbidden 
-    // from typing 'new OfficeCoffeeMachine()' to build their own private machines.
-    OfficeCoffeeMachine() { 
-        cout << ">> Breakroom Notice: The official single office coffee machine has been installed! <<\n"; 
+    // Lock warehouse: Prevents creating machines outside via 'new'
+    CoffeeMachine() { 
+        cout << ">> Machine installed in breakroom! <<\n"; 
     }
 
 public:
-    // LIFE EXAMPLE: No cloning or 3D scanning allowed.
-    // Deleting these functions ensures nobody can accidentally duplicate or copy 
-    // the single breakroom machine.
-    OfficeCoffeeMachine(const OfficeCoffeeMachine&) = delete;
-    OfficeCoffeeMachine& operator=(const OfficeCoffeeMachine&) = delete;
+    // No cloning: Blocks duplicate creations
+    CoffeeMachine(const CoffeeMachine&) = delete;
+    CoffeeMachine& operator=(const CoffeeMachine&) = delete;
 
-    // LIFE EXAMPLE: The Breakroom Door.
-    // This is the ONLY way for employees to access a coffee machine. 
-    static OfficeCoffeeMachine& getBreakroomDoor() {
-        // LIFE EXAMPLE: The very first employee to walk through the door in the 
-        // morning physically unboxes and boots up this 'static' machine. 
-        //
-        // THREAD SAFETY: If Employee B walks into the breakroom while Employee A 
-        // is still unboxing it, C++11 forces Employee B to pause and wait in line 
-        // until the machine is fully ready. After that, everyone uses the exact same one.
-        static OfficeCoffeeMachine singleBreakroomMachine; 
-        return singleBreakroomMachine;
+    // Breakroom Door: The single point of access
+    static CoffeeMachine& get() {
+        // First thread initializes it safely. Subsequent threads wait if needed,
+        // then cleanly share this exact same block of memory.
+        static CoffeeMachine machine; 
+        return machine;
     }
 
-    // LIFE EXAMPLE: Pressing the brew button.
-    // A shared action that any employee can perform once they are inside the breakroom.
-    void brewCup(const string& employeeName) {
-        cout << "[Machine]: Brewing a fresh cup of coffee for " << employeeName << "\n";
+    // Action method
+    void brew(const string& user) {
+        cout << "[Machine]: Brewed coffee for " << user << "\n";
     }
 };
 
 int main() {
-    // Employee Alice walks to the breakroom door, boots the machine (since she's first), and gets coffee.
-    OfficeCoffeeMachine::getBreakroomDoor().brewCup("Alice");
-    
-    // Employee Bob walks to the breakroom door. He doesn't create a new machine; 
-    // he safely uses the exact same machine Alice just set up.
-    OfficeCoffeeMachine::getBreakroomDoor().brewCup("Bob");
-    
-    // Employee Charlie uses the same machine.
-    OfficeCoffeeMachine::getBreakroomDoor().brewCup("Charlie");
+    // All calls access the exact same static instance through the short get() method
+    CoffeeMachine::get().brew("Alice");
+    CoffeeMachine::get().brew("Bob");
+    CoffeeMachine::get().brew("Charlie");
     
     return 0;
 }
