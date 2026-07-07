@@ -18,24 +18,24 @@ using namespace std;
  * ============================================================================
  */
 
-class ThreadSafeLogger {
+class SafeLogger {
 private:
     // POINT 1: Private constructor prevents any thread from calling 'new' directly.
-    ThreadSafeLogger() { 
+    SafeLogger() { 
         cout << "Logger Safely Initialized Once Across All Threads.\n"; 
     }
 
 public:
     // POINT 2: Delete copy constructor and assignment operator to prevent cloning.
-    ThreadSafeLogger(const ThreadSafeLogger&) = delete;
-    ThreadSafeLogger& operator=(const ThreadSafeLogger&) = delete;
+    SafeLogger(const SafeLogger&) = delete;
+    SafeLogger& operator=(const SafeLogger&) = delete;
 
     // POINT 1: Static function returning a reference to the single instance.
-    static ThreadSafeLogger& getInstance() {
+    static SafeLogger& getInstance() {
         // C++11 standard mandates this initialization is thread-safe!
         // If thread B calls this while thread A is constructing it, thread B 
         // will safely pause and wait until construction finishes.
-        static ThreadSafeLogger instance; 
+        static SafeLogger instance; 
         return instance;
     }
 
@@ -47,8 +47,8 @@ public:
 int main() {
     // No matter which thread running concurrently executes this line, 
     // they all get safely routed to the exact same memory instance.
-    ThreadSafeLogger::getInstance().logMessage("Application started successfully.");
-    ThreadSafeLogger::getInstance().logMessage("Processing transaction data...");
+    SafeLogger::getInstance().logMessage("Application started successfully.");
+    SafeLogger::getInstance().logMessage("Processing transaction data...");
     
     return 0;
 }
